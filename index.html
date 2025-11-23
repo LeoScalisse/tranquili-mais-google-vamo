@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#38b6ff" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Tranquili+</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      @keyframes ping {
+        75%, 100% { transform: scale(2); opacity: 0; }
+      }
+      @keyframes typing {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+      }
+      @keyframes incoming-message-animation {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .typing-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #9ca3af; /* Tailwind gray-400 */
+        animation: typing 1.4s infinite ease-in-out;
+      }
+      .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      .animate-ping {
+        animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
+      .animate-incoming-message {
+        animation: incoming-message-animation 0.4s ease-out forwards;
+      }
+      .backdrop-blur-lg {
+        backdrop-filter: blur(16px);
+      }
+      .explosion-container {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .particle {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #FBBF24; /* Fallback color */
+        opacity: 0;
+        pointer-events: none;
+        transform-origin: center;
+      }
+      .exploding .particle {
+        animation: burst 0.6s ease-out forwards;
+      }
+      .exploding .particle:nth-child(1) { --dx: 35px; --dy: 0px; }
+      .exploding .particle:nth-child(2) { --dx: -35px; --dy: 0px; }
+      .exploding .particle:nth-child(3) { --dx: 0px; --dy: 35px; }
+      .exploding .particle:nth-child(4) { --dx: 0px; --dy: -35px; }
+      .exploding .particle:nth-child(5) { --dx: 25px; --dy: 25px; }
+      .exploding .particle:nth-child(6) { --dx: -25px; --dy: 25px; }
+      .exploding .particle:nth-child(7) { --dx: 25px; --dy: -25px; }
+      .exploding .particle:nth-child(8) { --dx: -25px; --dy: -25px; }
+
+      @keyframes burst {
+          0% {
+              transform: translate(-50%, -50%) scale(0.5);
+              opacity: 1;
+          }
+          100% {
+              transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(1);
+              opacity: 0;
+          }
+      }
+      
+      /* CORRECT MATCH/TAP ANIMATIONS */
+      @keyframes correct-match-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+      .animate-correct-match {
+        animation: correct-match-pulse 0.5s ease-in-out;
+      }
+      
+      @keyframes correct-tap-glow {
+         0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.0); }
+         50% { box-shadow: 0 0 15px 5px rgba(74, 222, 128, 0.7); } /* green-400 glow */
+      }
+      .animate-correct-tap {
+         animation: correct-tap-glow 0.4s ease-out;
+      }
+      
+      /* MODAL ANIMATION */
+      @keyframes fade-in {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.2s ease-out forwards;
+      }
+
+      /* Screen Transitions */
+      @keyframes slide-in-from-right {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slide-out-to-left {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(-100%); opacity: 0; }
+      }
+      @keyframes slide-in-from-left {
+        from { transform: translateX(-100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slide-out-to-right {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+      .animate-slide-in-from-right {
+        animation: slide-in-from-right 0.3s ease-out forwards;
+      }
+      .animate-slide-out-to-left {
+        animation: slide-out-to-left 0.3s ease-out forwards;
+      }
+      .animate-slide-in-from-left {
+        animation: slide-in-from-left 0.3s ease-out forwards;
+      }
+      .animate-slide-out-to-right {
+        animation: slide-out-to-right 0.3s ease-out forwards;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+  }
+}
+</script>
+</head>
+  <body class="bg-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

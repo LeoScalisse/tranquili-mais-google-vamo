@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Tranquili+",
+  "description": "An application focused on mental well-being, self-care, and lightness, offering a calm and purposeful experience through AI-powered chat, games, and mood tracking.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
