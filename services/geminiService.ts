@@ -1,11 +1,13 @@
 import { GoogleGenAI, GenerateContentResponse, LiveServerMessage, Modality, Blob, Chat, Type } from "@google/genai";
 
-// Ensure the API key is available
-if (!process.env.API_KEY) {
-  console.error("API_KEY environment variable not set.");
+// Support both GEMINI_API_KEY (Standard) and API_KEY (Legacy/Generic)
+const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+
+if (!apiKey) {
+  console.error("GEMINI_API_KEY or API_KEY environment variable not set.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const ai = new GoogleGenAI({ apiKey: apiKey! });
 
 export interface WellnessTipData {
   text: string;
@@ -45,7 +47,7 @@ export const getWellnessTip = async (): Promise<WellnessTipData> => {
     });
 
     try {
-        let jsonText = response.text.trim();
+        let jsonText = response.text?.trim() || "";
         if (jsonText.startsWith('```json')) {
             jsonText = jsonText.substring(7, jsonText.length - 3).trim();
         } else if (jsonText.startsWith('```')) {
@@ -68,7 +70,7 @@ export const getComplexResponse = async (prompt: string): Promise<string> => {
         contents: prompt,
         config: { thinkingConfig: { thinkingBudget: 1024 } }
     });
-    return response.text;
+    return response.text || "";
 };
 
 export const getGroundedResponse = async (prompt: string): Promise<GenerateContentResponse> => {
@@ -165,7 +167,8 @@ export const connectLiveSession = async (
     onClose: (e: CloseEvent) => void;
   }
 ) => {
-  const liveAi = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+  const liveApiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  const liveAi = new GoogleGenAI({ apiKey: liveApiKey! });
   return liveAi.live.connect({
     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
     callbacks: {
@@ -225,7 +228,7 @@ export const generateDilemmaScenario = async () => {
             }
         }
     });
-    return JSON.parse(response.text);
+    return JSON.parse(response.text!);
 };
 
 // --- Audio Helpers ---
