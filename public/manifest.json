@@ -1,11 +1,14 @@
 {
   "name": "Tranquili+",
   "short_name": "Tranquili+",
+  "id": "tranquili-plus-app",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "background_color": "#38b6ff",
   "theme_color": "#38b6ff",
   "description": "Seu refúgio de calma, clareza e bem-estar.",
+  "categories": ["health", "lifestyle", "productivity"],
   "icons": [
     {
       "src": "/icon.svg",

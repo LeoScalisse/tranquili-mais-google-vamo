@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AppSettings, Screen } from '../types';
 import { ICON_SETS } from '../constants';
@@ -28,8 +29,8 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeScreen, setActiveScreen, se
   };
 
   return (
-    // Centering the floating navigation bar near the bottom
-    <nav className="fixed bottom-4 left-0 right-0 h-16 flex justify-center items-center z-50 px-2 pointer-events-none">
+    // Increased bottom spacing for iOS Safe Area
+    <nav className="fixed bottom-6 left-0 right-0 h-16 flex justify-center items-center z-50 px-2 pointer-events-none">
       <div 
         className="bg-white/80 backdrop-blur-lg border border-gray-200/80 rounded-2xl p-1.5 flex justify-between items-center shadow-xl space-x-1 pointer-events-auto max-w-full overflow-x-auto no-scrollbar"
         role="tablist"
