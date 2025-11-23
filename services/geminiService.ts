@@ -184,31 +184,44 @@ export const connectLiveSession = async (
 };
 
 export const generateDilemmaScenario = async () => {
+    const themes = ["Trabalho e Carreira", "Família e Lar", "Amizades e Social", "Relacionamento Amoroso", "Situações com Estranhos", "Autoconhecimento e Limites", "Ética no Cotidiano"];
+    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: "Crie um novo cenário para um jogo de dilemas emocionais. O cenário deve ser relacionável e focado em inteligência emocional.",
+        contents: `Crie um cenário de "dilema emocional" curto e envolvente focado no tema: ${randomTheme}.
+        O objetivo é testar e treinar a inteligência emocional do usuário.
+        
+        O cenário deve ter 3 opções de escolha:
+        1. Uma resposta emocionalmente inteligente/madura (Resultado Positivo).
+        2. Uma resposta reativa ou agressiva (Resultado Negativo).
+        3. Uma resposta passiva ou de evitação (Resultado Neutro ou levemente Negativo).
+        
+        Atribua 'scoreChange' positivo para boas escolhas (ex: +10, +15) e negativo ou zero para escolhas ruins (ex: -5, 0).`,
         config: {
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.OBJECT,
                 properties: {
                     id: { type: Type.INTEGER },
-                    character: { type: Type.STRING },
-                    emotion: { type: Type.STRING },
-                    situation: { type: Type.STRING },
+                    character: { type: Type.STRING, description: "Nome do personagem principal ou 'Você'" },
+                    emotion: { type: Type.STRING, description: "Emoji que representa a emoção predominante (ex: 😡, 😰, 😔)" },
+                    situation: { type: Type.STRING, description: "Descrição curta da situação (max 2 frases)" },
                     choices: {
                         type: Type.ARRAY,
                         items: {
                             type: Type.OBJECT,
                             properties: {
-                                text: { type: Type.STRING },
-                                consequence: { type: Type.STRING },
+                                text: { type: Type.STRING, description: "O texto da ação/escolha" },
+                                consequence: { type: Type.STRING, description: "Explicação educativa do que acontece após a escolha" },
                                 outcome: { type: Type.STRING, enum: ['positive', 'negative', 'neutral'] },
                                 scoreChange: { type: Type.INTEGER }
-                            }
+                            },
+                            required: ["text", "consequence", "outcome", "scoreChange"]
                         }
                     }
-                }
+                },
+                required: ["id", "character", "emotion", "situation", "choices"]
             }
         }
     });
