@@ -30,6 +30,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Handle 'skipWaiting' message to trigger immediate update
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Fetch event: Network first, fall back to cache
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests (like Gemini API or Supabase) for the basic shell cache

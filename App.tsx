@@ -20,6 +20,7 @@ import { getQuickResponseStream, getComplexResponse, getGroundedResponse, genera
 import { Chat } from '@google/genai';
 import { checkAchievements } from './services/achievementService';
 import { AchievementPopup } from './components/ui/AchievementPopup';
+import { PWALifecycle } from './components/PWALifecycle';
 
 const screenOrder = [Screen.Home, Screen.Chat, Screen.Gratitude, Screen.News, Screen.Games, Screen.Reports, Screen.Settings];
 
@@ -461,6 +462,9 @@ const App: React.FC = () => {
 
   return (
     <div className="font-sans">
+      {/* PWA Lifecycle Manager (Handle Updates) */}
+      <PWALifecycle />
+
       {showRegistrationModal && (
         <RegistrationModal
             onRegister={handleRegister}
