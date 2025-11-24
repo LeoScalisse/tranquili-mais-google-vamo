@@ -19,7 +19,8 @@ const CATEGORIES = [
     { id: 'mental_health', label: 'Saúde Mental', query: 'saúde mental, ansiedade e bem-estar emocional' },
     { id: 'neuroscience', label: 'Neurociência', query: 'neurociência, cérebro, memória e aprendizado' },
     { id: 'psychology', label: 'Psicologia', query: 'psicologia positiva, relacionamentos e terapia' },
-    { id: 'wellness', label: 'Bem-estar', query: 'mindfulness, sono, hábitos saudáveis e relaxamento' }
+    { id: 'wellness', label: 'Bem-estar', query: 'sono, hábitos saudáveis e relaxamento' },
+    { id: 'self_knowledge', label: 'Autoconhecimento', query: 'mindfulness, meditação e inteligência emocional' }
 ];
 
 // --- Helper: Generate Deterministic Gradient ---
