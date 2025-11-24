@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { ChatMessage } from '../types';
 
 // -----------------------------------------------------------------------------
 // Supabase credentials are now read from environment variables for security.
@@ -19,3 +20,51 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(finalSupabaseUrl, finalSupabaseAnonKey);
+
+// --- Chat Persistence Helpers ---
+
+export const saveChatMessage = async (message: ChatMessage, userId: string) => {
+    if (!userId) return;
+    
+    // Prepare object for DB (convert timestamp number to ISO string)
+    const dbMessage = {
+        id: message.id,
+        user_id: userId,
+        role: message.role,
+        text: message.text,
+        image: message.image || null,
+        sources: message.sources || null, // JSONB support in Supabase
+        timestamp: new Date(message.timestamp).toISOString()
+    };
+
+    const { error } = await supabase.from('chat_history').insert(dbMessage);
+    
+    if (error) {
+        console.error("Error saving chat message to Supabase:", error);
+        throw error;
+    }
+};
+
+export const getUserChatHistory = async (userId: string): Promise<ChatMessage[]> => {
+    const { data, error } = await supabase
+        .from('chat_history')
+        .select('*')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching chat history from Supabase:", error);
+        throw error;
+    }
+
+    // Map DB format back to App format (ISO string -> timestamp number)
+    return (data || []).map((row: any) => ({
+        id: row.id,
+        role: row.role,
+        text: row.text,
+        image: row.image,
+        sources: row.sources,
+        timestamp: new Date(row.timestamp).getTime(),
+        user_id: row.user_id
+    }));
+};

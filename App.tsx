@@ -14,7 +14,7 @@ import AuthScreen from './screens/AuthScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegistrationModal from './components/RegistrationModal';
 import SideMenu from './components/SideMenu';
-import { supabase } from './services/supabaseClient';
+import { supabase, saveChatMessage, getUserChatHistory } from './services/supabaseClient';
 import { User, Session } from '@supabase/supabase-js';
 import { getQuickResponseStream, getComplexResponse, getGroundedResponse, generateCalmImage, createFlashLiteChat, getMultimodalResponse } from './services/geminiService';
 import { Chat } from '@google/genai';
@@ -138,14 +138,14 @@ const App: React.FC = () => {
         setUserProfile({ id: profileData.id, name: profileData.name, path: profileData.path, reason: profileData.reason });
         setSettings({ ...getDefaultSettings(), ...(profileData.settings || {}) });
 
-        const [{ data: moods }, { data: chats }] = await Promise.all([
+        // Fetch Moods and Chats in parallel
+        const [{ data: moods }, chats] = await Promise.all([
             supabase.from('mood_history').select('*').eq('user_id', user.id).order('date', { ascending: true }),
-            supabase.from('chat_history').select('*').eq('user_id', user.id).order('timestamp', { ascending: true })
+            getUserChatHistory(user.id) // Use service function for chat history
         ]);
 
         setMoodHistory(moods || []);
-        const formattedChats = chats?.map(c => ({...c, timestamp: new Date(c.timestamp).getTime()})) || [];
-        setChatHistory(formattedChats);
+        setChatHistory(chats || []);
 
         setAuthStatus('authenticated');
         setActiveScreen(Screen.Home);
@@ -232,11 +232,13 @@ const App: React.FC = () => {
         }
 
         const moodInserts = guestData.moods.map(m => ({ ...m, user_id: data.user!.id }));
-        const chatInserts = guestData.chats.map(c => ({ ...c, user_id: data.user!.id, timestamp: new Date(c.timestamp).toISOString() }));
+        
+        // Use the service to save all chat messages
+        const chatPromises = guestData.chats.map(msg => saveChatMessage(msg, data.user!.id));
         
         await Promise.all([
             moodInserts.length > 0 ? supabase.from('mood_history').insert(moodInserts) : Promise.resolve(),
-            chatInserts.length > 0 ? supabase.from('chat_history').insert(chatInserts) : Promise.resolve()
+            ...chatPromises
         ]);
     }
     
@@ -324,8 +326,9 @@ const App: React.FC = () => {
     setChatHistory(newHistory);
     setIsChatLoading(true);
 
+    // Persist User Message
     if (authStatus === 'authenticated' && currentUser) {
-        await supabase.from('chat_history').insert({ ...userMessage, user_id: currentUser.id, timestamp: new Date(userMessage.timestamp).toISOString() });
+        saveChatMessage(userMessage, currentUser.id);
     }
 
     try {
@@ -380,14 +383,16 @@ const App: React.FC = () => {
         
         const finalModelMessage: ChatMessage = { id: modelMessageId, role: 'model', text: modelResponseText, image: modelResponseImage, sources: modelResponseSources, timestamp: Date.now() };
         
+        // Update UI with final message (if strict mode or image gen, otherwise stream handled it)
         if (currentMode !== ChatMode.QUICK) {
             setChatHistory(prev => [...prev, finalModelMessage]);
         } else {
             setChatHistory(prev => prev.map(m => m.id === modelMessageId ? finalModelMessage : m));
         }
 
+        // Persist Model Message
         if (authStatus === 'authenticated' && currentUser) {
-            await supabase.from('chat_history').insert({ ...finalModelMessage, user_id: currentUser.id, timestamp: new Date(finalModelMessage.timestamp).toISOString() });
+            saveChatMessage(finalModelMessage, currentUser.id);
         }
         playSound('receive');
     } catch (error) {
@@ -395,7 +400,7 @@ const App: React.FC = () => {
         const errorMessage: ChatMessage = { id: 'error', role: 'model', text: 'Desculpe, algo deu errado. Tente novamente.', timestamp: Date.now() };
         setChatHistory(prev => [...prev, errorMessage]);
         if (authStatus === 'authenticated' && currentUser) {
-            await supabase.from('chat_history').insert({ ...errorMessage, user_id: currentUser.id, timestamp: new Date(errorMessage.timestamp).toISOString() });
+            saveChatMessage(errorMessage, currentUser.id);
         }
         playSound('error');
     } finally {
