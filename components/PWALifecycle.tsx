@@ -13,8 +13,11 @@ export const PWALifecycle: React.FC = () => {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-        // Use relative path './sw.js' to avoid origin mismatch issues in preview environments
-        navigator.serviceWorker.register('./sw.js').then((registration) => {
+        // Explicitly construct URL with current origin to prevent mismatch errors
+        // in preview environments (like AI Studio) where base URLs might differ.
+        const swUrl = `${window.location.origin}/sw.js`;
+
+        navigator.serviceWorker.register(swUrl).then((registration) => {
             // Check if there is already a waiting worker (update downloaded but not activated)
             if (registration.waiting) {
                 onSWUpdate(registration);
@@ -32,7 +35,8 @@ export const PWALifecycle: React.FC = () => {
                 }
             };
         }).catch(error => {
-            console.error("Service Worker registration failed:", error);
+            // Log error but don't crash app. Common in dev/preview environments without HTTPS/Locahost
+            console.log("Service Worker registration skipped/failed (expected in some preview envs):", error);
         });
 
         // Reload when the new worker takes control
