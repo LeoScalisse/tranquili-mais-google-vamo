@@ -13,7 +13,8 @@ export const PWALifecycle: React.FC = () => {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then((registration) => {
+        // Use relative path './sw.js' to avoid origin mismatch issues in preview environments
+        navigator.serviceWorker.register('./sw.js').then((registration) => {
             // Check if there is already a waiting worker (update downloaded but not activated)
             if (registration.waiting) {
                 onSWUpdate(registration);
@@ -30,6 +31,8 @@ export const PWALifecycle: React.FC = () => {
                     };
                 }
             };
+        }).catch(error => {
+            console.error("Service Worker registration failed:", error);
         });
 
         // Reload when the new worker takes control

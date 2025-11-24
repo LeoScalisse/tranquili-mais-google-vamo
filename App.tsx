@@ -59,7 +59,7 @@ const App: React.FC = () => {
   // Achievement State
   const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
   const [notificationQueue, setNotificationQueue] = useState<Achievement[]>([]);
-  const isInitialAchievementCheckDone = useRef(false);
+  const [achievementsInitialized, setAchievementsInitialized] = useState(false);
 
   // --- Supabase Auth & Data Management ---
   useEffect(() => {
@@ -166,10 +166,10 @@ const App: React.FC = () => {
       const allAchievements = checkAchievements(moodHistory, chatHistory.length);
       const currentlyUnlockedIds = new Set(allAchievements.filter(a => a.unlocked).map(a => a.id));
 
-      if (!isInitialAchievementCheckDone.current) {
+      if (!achievementsInitialized) {
           // First check: just sync state, don't notify for pre-existing achievements
           setUnlockedAchievements(currentlyUnlockedIds);
-          isInitialAchievementCheckDone.current = true;
+          setAchievementsInitialized(true);
       } else {
           // Subsequent checks: find newly unlocked achievements
           const newUnlocks = allAchievements.filter(a => a.unlocked && !unlockedAchievements.has(a.id));
@@ -182,7 +182,7 @@ const App: React.FC = () => {
               setUnlockedAchievements(currentlyUnlockedIds);
           }
       }
-  }, [moodHistory, chatHistory, userProfile]); // Re-run when data changes
+  }, [moodHistory, chatHistory, userProfile, achievementsInitialized, unlockedAchievements]); // Re-run when data changes
 
   const handleDismissNotification = () => {
       setNotificationQueue(prev => prev.slice(1));
@@ -261,7 +261,7 @@ const App: React.FC = () => {
     setIsSideMenuOpen(false);
     setUnlockedAchievements(new Set());
     setNotificationQueue([]);
-    isInitialAchievementCheckDone.current = false;
+    setAchievementsInitialized(false);
   };
 
   const handleProtectedAction = useCallback((action: () => void) => {
