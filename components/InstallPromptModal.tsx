@@ -5,15 +5,8 @@ import { Button } from './ui/Shadcn';
 
 const AppLogo = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className={className}>
-      <rect width="512" height="512" fill="#38b6ff"/>
-      <g transform="translate(60, 40) scale(0.8)">
-         <path d="M256 90c-40-10-80 0-110 30-40 40-40 120 0 160 0 20-10 50 30 70 30 15 80 15 80 0 0 15 50 15 80 0 40-20 30-50 30-70 40-40 40-120 0-160-30-30-70-40-110-30z" 
-         fill="none" stroke="#ffffff" strokeWidth="30" strokeLinecap="round" strokeLinejoin="round"/>
-         <path d="M256 90v260" stroke="#ffffff" strokeWidth="25" strokeLinecap="round"/>
-         <path d="M180 160c10 20 40 20 50 0" stroke="#ffffff" strokeWidth="25" strokeLinecap="round" fill="none"/>
-         <path d="M332 160c-10 20-40 20-50 0" stroke="#ffffff" strokeWidth="25" strokeLinecap="round" fill="none"/>
-      </g>
-      <path d="M130 340v100M80 390h100" stroke="#ffde59" strokeWidth="50" strokeLinecap="round" />
+    <rect width="512" height="512" fill="#38b6ff"/>
+    <path d="M256 112V400M112 256H400" stroke="#ffde59" strokeWidth="110" strokeLinecap="round" />
   </svg>
 );
 
