@@ -1,8 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background Blue #38b6ff -->
   <rect width="512" height="512" fill="#38b6ff"/>
-  
-  <!-- Thick Yellow Plus Sign #ffde59 -->
-  <!-- Center: 256, 256. Stroke width: 110 for chunkiness. Linecap: round for rounded ends. -->
-  <path d="M256 112V400M112 256H400" stroke="#ffde59" stroke-width="110" stroke-linecap="round" />
+  <g transform="translate(60, 40) scale(0.8)">
+     <path d="M256 90c-40-10-80 0-110 30-40 40-40 120 0 160 0 20-10 50 30 70 30 15 80 15 80 0 0 15 50 15 80 0 40-20 30-50 30-70 40-40 40-120 0-160-30-30-70-40-110-30z" 
+     fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+     <path d="M256 90v260" stroke="#ffffff" stroke-width="25" stroke-linecap="round"/>
+     <path d="M180 160c10 20 40 20 50 0" stroke="#ffffff" stroke-width="25" stroke-linecap="round" fill="none"/>
+     <path d="M332 160c-10 20-40 20-50 0" stroke="#ffffff" stroke-width="25" stroke-linecap="round" fill="none"/>
+  </g>
+  <path d="M130 340v100M80 390h100" stroke="#ffde59" stroke-width="50" stroke-linecap="round" />
 </svg>
