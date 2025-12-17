@@ -4,14 +4,9 @@ import { X, ShareIcon, MoreVerticalIcon, DownloadIcon, Plus } from './ui/Icons';
 import { Button } from './ui/Shadcn';
 
 const AppLogo = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" className={className}>
-    <rect width="420" height="420" fill="#38b6ff"/>
-    <g transform="translate(60, 60) scale(12.5)">
-      <path fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M9.5 2A2.5 2.5 0 0 1 12 4.5v1.13a1 1 0 0 0 .5.87l1.88.94a1 1 0 0 1 .62 1.48l-1.38 2.76A1 1 0 0 0 14 13.5v1.13a1 1 0 0 1-.5.87l-1.88.94a1 1 0 0 0-.62 1.48l1.38 2.76A1 1 0 0 0 12 22.5a2.5 2.5 0 0 1-2.5-2.5m-5 0A2.5 2.5 0 0 1 7 17.5v-1.13a1 1 0 0 0-.5-.87l-1.88-.94a1 1 0 0 1-.62-1.48l1.38-2.76A1 1 0 0 0 5 8.5v-1.13a1 1 0 0 1 .5-.87l1.88-.94a1 1 0 0 0 .62-1.48L6.12 2.24A1 1 0 0 0 4.5 2a2.5 2.5 0 0 1 0 5" />
-    </g>
-    <g transform="translate(60, 210) scale(7)">
-       <path fill="none" d="M12 5v14M5 12h14" stroke="#ffde59" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-    </g>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className={className}>
+    <rect width="512" height="512" fill="#38b6ff"/>
+    <path d="M256 112V400M112 256H400" stroke="#ffde59" strokeWidth="110" strokeLinecap="round" />
   </svg>
 );
 

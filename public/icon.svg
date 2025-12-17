@@ -1,15 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <!-- Background Blue #38b6ff -->
-  <rect width="420" height="420" fill="#38b6ff"/>
+  <rect width="512" height="512" fill="#38b6ff"/>
   
-  <!-- Brain Icon (White Outline) Centered and Scaled -->
-  <!-- Using stroke for clean lines instead of fill -->
-  <g transform="translate(60, 60) scale(12.5)">
-    <path fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9.5 2A2.5 2.5 0 0 1 12 4.5v1.13a1 1 0 0 0 .5.87l1.88.94a1 1 0 0 1 .62 1.48l-1.38 2.76A1 1 0 0 0 14 13.5v1.13a1 1 0 0 1-.5.87l-1.88.94a1 1 0 0 0-.62 1.48l1.38 2.76A1 1 0 0 0 12 22.5a2.5 2.5 0 0 1-2.5-2.5m-5 0A2.5 2.5 0 0 1 7 17.5v-1.13a1 1 0 0 0-.5-.87l-1.88-.94a1 1 0 0 1-.62-1.48l1.38-2.76A1 1 0 0 0 5 8.5v-1.13a1 1 0 0 1 .5-.87l1.88-.94a1 1 0 0 0 .62-1.48L6.12 2.24A1 1 0 0 0 4.5 2a2.5 2.5 0 0 1 0 5" />
-  </g>
-
-  <!-- Plus Icon (Yellow #ffde59) positioned at bottom left -->
-  <g transform="translate(60, 210) scale(7)">
-     <path fill="none" d="M12 5v14M5 12h14" stroke="#ffde59" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
-  </g>
+  <!-- Thick Yellow Plus Sign #ffde59 -->
+  <!-- Center: 256, 256. Stroke width: 110 for chunkiness. Linecap: round for rounded ends. -->
+  <path d="M256 112V400M112 256H400" stroke="#ffde59" stroke-width="110" stroke-linecap="round" />
 </svg>
