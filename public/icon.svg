@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background Blue #38b6ff -->
+  <!-- Fundo Azul #38b6ff -->
   <rect width="512" height="512" fill="#38b6ff"/>
   
-  <!-- Thick Yellow Plus Sign #ffde59 -->
-  <!-- Center: 256, 256. Stroke width: 110 for chunkiness. Linecap: round for rounded ends. -->
-  <path d="M256 112V400M112 256H400" stroke="#ffde59" stroke-width="110" stroke-linecap="round" />
+  <!-- Símbolo "+" Amarelo #ffde59 -->
+  <!-- Dimensões ajustadas para garantir que o símbolo fique dentro da "zona de segurança" de ícones adaptativos do Android -->
+  <path d="M256 128V384M128 256H384" stroke="#ffde59" stroke-width="120" stroke-linecap="round" />
 </svg>
