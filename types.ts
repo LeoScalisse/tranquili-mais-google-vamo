@@ -63,4 +63,9 @@ export interface AppSettings {
         googleFit: boolean;
         appleHealth: boolean;
     };
+    highScores?: {
+        memory: { easy: number | null; medium: number | null; hard: number | null };
+        sequence: number;
+        dilemma: number;
+    };
 }

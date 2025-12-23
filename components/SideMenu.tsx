@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UserProfile, Screen } from '../types';
 import { SettingsIcon, LogOutIcon, X } from './ui/Icons';
@@ -6,7 +7,7 @@ import { playSound } from '../services/soundService';
 interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
   userEmail?: string;
   onNavigate: (screen: Screen) => void;
   onLogout: () => void;
@@ -23,6 +24,8 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userProfile, userE
     playSound('confirm');
     onLogout();
   }
+
+  if (!userProfile) return null;
 
   return (
     <div
@@ -53,9 +56,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, userProfile, userE
         {/* User Profile */}
         <div className="p-4 border-b">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#38b6ff] to-blue-200 flex items-center justify-center text-white text-3xl font-bold mb-3">
-                {userProfile.name.charAt(0).toUpperCase()}
+                {userProfile?.name?.charAt(0).toUpperCase() || '?'}
             </div>
-            <h3 className="font-bold text-gray-800 truncate">{userProfile.name}</h3>
+            <h3 className="font-bold text-gray-800 truncate">{userProfile?.name || 'Usuário'}</h3>
             <p className="text-sm text-gray-500 truncate">{userEmail || 'Convidado'}</p>
         </div>
 

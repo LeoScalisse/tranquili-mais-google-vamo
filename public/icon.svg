@@ -1,8 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Fundo Azul #38b6ff -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#38b6ff"/>
-  
-  <!-- Símbolo "+" Amarelo #ffde59 -->
-  <!-- Dimensões ajustadas para garantir que o símbolo fique dentro da "zona de segurança" de ícones adaptativos do Android -->
-  <path d="M256 128V384M128 256H384" stroke="#ffde59" stroke-width="120" stroke-linecap="round" />
+  <path d="M256 120V392M120 256H392" stroke="#ffde59" stroke-width="110" stroke-linecap="round" />
 </svg>
