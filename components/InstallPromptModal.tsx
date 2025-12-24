@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { X, ShareIcon, MoreVerticalIcon, DownloadIcon, Plus } from './ui/Icons';
 import { Button } from './ui/Shadcn';
@@ -6,7 +5,7 @@ import { Button } from './ui/Shadcn';
 const AppLogo = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className={className}>
     <rect width="512" height="512" fill="#38b6ff"/>
-    <path d="M256 112V400M112 256H400" stroke="#ffde59" strokeWidth="110" strokeLinecap="round" />
+    <path d="M256 120V392M120 256H392" stroke="#ffde59" stroke-width="110" stroke-linecap="round" />
   </svg>
 );
 
