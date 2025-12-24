@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, Screen, Mood, MoodEntry, AppSettings, ChatMessage, ChatMode, Achievement } from './types';
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -80,6 +81,7 @@ const App: React.FC = () => {
   const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
   const [notificationQueue, setNotificationQueue] = useState<Achievement[]>([]);
   const isInitialLoadRef = useRef(true);
+  const transitionTimeoutRef = useRef<number | null>(null);
 
   // --- Supabase Auth & Data Management ---
   useEffect(() => {
@@ -254,11 +256,25 @@ const App: React.FC = () => {
 
   const handleSetActiveScreen = (newScreen: Screen) => {
       if (newScreen === activeScreen) return;
+      
+      // Limpa timeout anterior se houver para evitar conflitos de transição rápida
+      if (transitionTimeoutRef.current) {
+          window.clearTimeout(transitionTimeoutRef.current);
+      }
+
       const currentIndex = screenOrder.indexOf(activeScreen);
       const newIndex = screenOrder.indexOf(newScreen);
+      
       setDirection(newIndex > currentIndex ? 'right' : 'left');
       setPreviousScreen(activeScreen);
       setActiveScreen(newScreen);
+
+      // Limpa o estado da transição após o término da animação CSS (300ms) mais uma folga (50ms)
+      transitionTimeoutRef.current = window.setTimeout(() => {
+          setPreviousScreen(null);
+          setDirection(null);
+          transitionTimeoutRef.current = null;
+      }, 350);
   };
 
   const handleMoodSelect = async (mood: Mood) => {
@@ -387,11 +403,17 @@ const App: React.FC = () => {
       )}
       <main className="relative h-[100dvh] w-screen overflow-hidden">
         {previousScreen && (
-            <div key={previousScreen} className={`absolute inset-0 w-full h-full ${direction === 'right' ? 'animate-slide-out-to-left' : 'animate-slide-out-to-right'}`}>
+            <div 
+              key={`prev-${previousScreen}`} 
+              className={`absolute inset-0 w-full h-full z-0 ${direction === 'right' ? 'animate-slide-out-to-left' : 'animate-slide-out-to-right'}`}
+            >
                 {renderScreenContent(previousScreen)}
             </div>
         )}
-        <div key={activeScreen} className={`absolute inset-0 w-full h-full ${direction ? (direction === 'right' ? 'animate-slide-in-from-right' : 'animate-slide-in-from-left') : ''}`}>
+        <div 
+          key={`active-${activeScreen}`} 
+          className={`absolute inset-0 w-full h-full z-10 ${direction ? (direction === 'right' ? 'animate-slide-in-from-right' : 'animate-slide-in-from-left') : ''}`}
+        >
             {renderScreenContent(activeScreen)}
         </div>
       </main>
