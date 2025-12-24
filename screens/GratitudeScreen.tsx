@@ -76,11 +76,10 @@ const GratitudeSummary: React.FC<{ events: Event[] }> = ({ events }) => {
 const GratitudeScreen: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
 
-  useEffect(() => {
+  const loadEvents = () => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        // Parse dates back to objects
         const parsed = JSON.parse(stored).map((e: any) => ({
           ...e,
           startTime: new Date(e.startTime),
@@ -91,6 +90,13 @@ const GratitudeScreen: React.FC = () => {
         console.error("Failed to parse gratitude events", e);
       }
     }
+  };
+
+  useEffect(() => {
+    loadEvents();
+    // Adiciona um listener para atualizar se mudarem os dados em outra aba ou via widget
+    window.addEventListener('storage', loadEvents);
+    return () => window.removeEventListener('storage', loadEvents);
   }, []);
 
   const saveEvents = (newEvents: Event[]) => {

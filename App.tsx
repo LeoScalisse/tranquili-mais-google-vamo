@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, Screen, Mood, MoodEntry, AppSettings, ChatMessage, ChatMode, Achievement } from './types';
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -37,6 +36,10 @@ const getDefaultSettings = (): AppSettings => ({
   }
 });
 
+/**
+ * Helper component para garantir que "Tranquili+" ou a palavra "mais" 
+ * sigam a identidade visual (amarelo #ffde59).
+ */
 export const BrandText: React.FC<{ text: string }> = ({ text }) => {
     if (!text) return null;
     const parts = text.split(/(mais|\+)/gi);
@@ -44,7 +47,9 @@ export const BrandText: React.FC<{ text: string }> = ({ text }) => {
         <>
             {parts.map((part, i) => {
                 const lower = part.toLowerCase();
-                if (lower === 'mais' || lower === '+') return <span key={i} className="brand-plus">+</span>;
+                if (lower === 'mais' || lower === '+') {
+                    return <span key={i} className="brand-plus">+</span>;
+                }
                 return part;
             })}
         </>
@@ -58,21 +63,28 @@ const App: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [settings, setSettings] = useState<AppSettings>(getDefaultSettings());
+
   const [activeScreen, setActiveScreen] = useState<Screen>(Screen.Home);
   const [previousScreen, setPreviousScreen] = useState<Screen | null>(null);
   const [direction, setDirection] = useState<'right' | 'left' | null>(null);
+
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatSessionRef = useRef<Chat | null>(null);
+
+  // Achievement State
   const [unlockedAchievements, setUnlockedAchievements] = useState<Set<string>>(new Set());
   const [notificationQueue, setNotificationQueue] = useState<Achievement[]>([]);
-  const [achievementsInitialized, setAchievementsInitialized] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
+  // --- Supabase Auth & Data Management ---
   useEffect(() => {
     chatSessionRef.current = createFlashLiteChat();
+
     const checkInitialSession = async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -84,25 +96,33 @@ const App: React.FC = () => {
                 setAuthFlowScreen(Screen.Auth);
             }
         } catch (e) {
+            console.error("startup error:", e);
             setAuthStatus('unauthenticated');
         }
     };
     checkInitialSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setCurrentUser(session.user);
-        if (authStatus !== 'authenticated') fetchUserData(session.user);
+        if (authStatus !== 'authenticated' && authStatus !== 'loading') {
+            fetchUserData(session.user);
+        }
       } else {
         setCurrentUser(null);
-        if (authStatus === 'authenticated') handleLogout(false);
+        if (authStatus === 'authenticated') {
+            handleLogout(false);
+        }
       }
     });
+
     return () => subscription.unsubscribe();
-  }, []);
+  }, [authStatus]);
 
   const fetchUserData = async (user: User) => {
     try {
         let { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        
         if (!profileData && user.user_metadata?.name) {
             const newProfile = {
                 id: user.id,
@@ -111,34 +131,44 @@ const App: React.FC = () => {
                 reason: user.user_metadata.reason || '',
                 settings: user.user_metadata.settings || getDefaultSettings()
             };
-            await supabase.from('profiles').insert(newProfile);
-            profileData = newProfile;
+            const { error: insertError } = await supabase.from('profiles').insert(newProfile);
+            if (!insertError) profileData = newProfile;
         }
+
         if (profileData) {
             setUserProfile({ id: profileData.id, name: profileData.name, path: profileData.path, reason: profileData.reason });
             setSettings({ ...getDefaultSettings(), ...(profileData.settings || {}) });
+
             const [{ data: moods }, chats] = await Promise.all([
                 supabase.from('mood_history').select('*').eq('user_id', user.id).order('date', { ascending: true }),
                 getUserChatHistory(user.id)
             ]);
+
             setMoodHistory(moods || []);
             setChatHistory(chats || []);
+            
+            // Re-reset load ref to ensure achievements are captured from fresh sync
+            isInitialLoadRef.current = true;
             setAuthStatus('authenticated');
-            setActiveScreen(Screen.Home);
         }
     } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error fetching data:', error);
     }
   };
 
+  // Improved Achievement Sync Logic
   useEffect(() => {
-      if (!userProfile) return;
+      if (authStatus === 'loading' || !userProfile) return;
+
       const allAchievements = checkAchievements(moodHistory, chatHistory.length);
       const currentlyUnlockedIds = new Set(allAchievements.filter(a => a.unlocked).map(a => a.id));
-      if (!achievementsInitialized) {
+
+      if (isInitialLoadRef.current) {
+          // BASELINE: Just store what's already done without popups
           setUnlockedAchievements(currentlyUnlockedIds);
-          setAchievementsInitialized(true);
+          isInitialLoadRef.current = false;
       } else {
+          // SESSION UNLOCK: Only achievements we just reached now
           const newUnlocks = allAchievements.filter(a => a.unlocked && !unlockedAchievements.has(a.id));
           if (newUnlocks.length > 0) {
               newUnlocks.forEach(ach => {
@@ -148,13 +178,16 @@ const App: React.FC = () => {
               setUnlockedAchievements(currentlyUnlockedIds);
           }
       }
-  }, [moodHistory, chatHistory, userProfile, achievementsInitialized, unlockedAchievements]);
+  }, [moodHistory.length, chatHistory.length, userProfile?.id, authStatus, unlockedAchievements]);
 
-  const handleDismissNotification = () => setNotificationQueue(prev => prev.slice(1));
+  const handleDismissNotification = () => {
+      setNotificationQueue(prev => prev.slice(1));
+  };
 
   const handleOnboardingComplete = (profile: UserProfile) => {
     setUserProfile(profile);
     setAuthStatus('guest');
+    isInitialLoadRef.current = true; // Setup baseline for guest
     setActiveScreen(Screen.Home);
   };
   
@@ -162,12 +195,17 @@ const App: React.FC = () => {
     if (!userProfile) return { error: { message: 'Perfil não encontrado.' } };
     const guestData = { profile: userProfile, moods: moodHistory, chats: chatHistory };
     const { data, error } = await supabase.auth.signUp({
-        email, password: pass,
+        email,
+        password: pass,
         options: { data: { ...guestData.profile, settings } }
     });
     if (error) return { error };
     if (data.user) {
-        await supabase.from('profiles').upsert({ ...guestData.profile, id: data.user.id, settings });
+        await supabase.from('profiles').upsert({
+            ...guestData.profile,
+            id: data.user.id,
+            settings: settings
+        });
         const moodInserts = guestData.moods.map(m => ({ ...m, user_id: data.user!.id }));
         const chatPromises = guestData.chats.map(msg => saveChatMessage(msg, data.user!.id));
         await Promise.all([
@@ -176,7 +214,10 @@ const App: React.FC = () => {
         ]);
     }
     setShowRegistrationModal(false);
-    if (pendingAction) { pendingAction(); setPendingAction(null); }
+    if (pendingAction) {
+        pendingAction();
+        setPendingAction(null);
+    }
     return { error: null };
   };
 
@@ -192,7 +233,7 @@ const App: React.FC = () => {
     setIsSideMenuOpen(false);
     setUnlockedAchievements(new Set());
     setNotificationQueue([]);
-    setAchievementsInitialized(false);
+    isInitialLoadRef.current = true;
   };
 
   const handleProtectedAction = useCallback((action: () => void) => {
@@ -209,7 +250,7 @@ const App: React.FC = () => {
     if (authStatus === 'authenticated' && userProfile?.id) {
         supabase.from('profiles').update({ settings }).eq('id', userProfile.id).then();
     }
-  }, [settings, authStatus, userProfile]);
+  }, [settings, authStatus, userProfile?.id]);
 
   const handleSetActiveScreen = (newScreen: Screen) => {
       if (newScreen === activeScreen) return;
@@ -239,6 +280,7 @@ const App: React.FC = () => {
     setChatHistory(prev => [...prev, userMessage]);
     setIsChatLoading(true);
     if (authStatus === 'authenticated' && currentUser) saveChatMessage(userMessage, currentUser.id);
+
     try {
         const modelMessageId = crypto.randomUUID();
         let modelResponseText = '';
@@ -250,20 +292,22 @@ const App: React.FC = () => {
         else if (message.startsWith('[Canvas:')) currentMode = ChatMode.IMAGE;
         
         if (files.length > 0 && currentMode === ChatMode.QUICK) {
-             const base64 = await new Promise<string>((res) => {
+             const base64 = await new Promise<string>((resolve) => {
                 const reader = new FileReader();
-                reader.onload = (e) => res((e.target?.result as string).split(',')[1]);
+                reader.onload = (event) => resolve((event.target?.result as string).split(',')[1]);
                 reader.readAsDataURL(files[0]);
              });
              const response = await getMultimodalResponse(userMessageText, base64, files[0].type);
              modelResponseText = response.text || '';
         } else {
              switch (currentMode) {
-                case ChatMode.DEEP: modelResponseText = await getComplexResponse(userMessageText); break;
+                case ChatMode.DEEP:
+                    modelResponseText = await getComplexResponse(userMessageText);
+                    break;
                 case ChatMode.SEARCH:
-                    const searchResp = await getGroundedResponse(userMessageText);
-                    modelResponseText = searchResp.text || '';
-                    modelResponseSources = searchResp.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((c: any) => c.web).filter(Boolean) || [];
+                    const searchResponse = await getGroundedResponse(userMessageText);
+                    modelResponseText = searchResponse.text || '';
+                    modelResponseSources = searchResponse.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => chunk.web).filter(Boolean) || [];
                     break;
                 case ChatMode.IMAGE:
                     modelResponseText = "Aqui está uma imagem para te inspirar:";
@@ -272,8 +316,8 @@ const App: React.FC = () => {
                 default:
                     if (chatSessionRef.current) {
                         const stream = await getQuickResponseStream(chatSessionRef.current, userMessageText);
-                        const placeholder: ChatMessage = { id: modelMessageId, role: 'model', text: '', timestamp: Date.now() };
-                        setChatHistory(prev => [...prev, placeholder]);
+                        const placeholderMessage: ChatMessage = { id: modelMessageId, role: 'model', text: '', timestamp: Date.now() };
+                        setChatHistory(prev => [...prev, placeholderMessage]);
                         for await (const chunk of stream) {
                             modelResponseText += chunk.text;
                             setChatHistory(prev => prev.map(m => m.id === modelMessageId ? { ...m, text: modelResponseText } : m));
@@ -282,16 +326,34 @@ const App: React.FC = () => {
                     break;
              }
         }
-        const finalMsg: ChatMessage = { id: modelMessageId, role: 'model', text: modelResponseText, image: modelResponseImage, sources: modelResponseSources, timestamp: Date.now() };
-        if (currentMode !== ChatMode.QUICK) setChatHistory(prev => [...prev, finalMsg]);
-        else setChatHistory(prev => prev.map(m => m.id === modelMessageId ? finalMsg : m));
-        if (authStatus === 'authenticated' && currentUser) saveChatMessage(finalMsg, currentUser.id);
+        const finalModelMessage: ChatMessage = { id: modelMessageId, role: 'model', text: modelResponseText, image: modelResponseImage, sources: modelResponseSources, timestamp: Date.now() };
+        if (currentMode !== ChatMode.QUICK) setChatHistory(prev => [...prev, finalModelMessage]);
+        else setChatHistory(prev => prev.map(m => m.id === modelMessageId ? finalModelMessage : m));
+        if (authStatus === 'authenticated' && currentUser) saveChatMessage(finalModelMessage, currentUser.id);
         playSound('receive');
-    } catch (e) { playSound('error'); } finally { setIsChatLoading(false); }
+    } catch (error) {
+        playSound('error');
+    } finally {
+        setIsChatLoading(false);
+    }
   };
 
-  const renderCurrentScreen = (screen: Screen) => {
-    const props = { userProfile, moodHistory, onMoodSelect: handleMoodSelect, navigateTo: handleSetActiveScreen, handleProtectedAction, onOpenSideMenu: () => setIsSideMenuOpen(true), chatHistory, onSendMessage: handleSendMessage, isLoading: isChatLoading, settings, setSettings, onLogout: handleLogout };
+  const renderScreenContent = (screen: Screen) => {
+    const props = { 
+        userProfile: userProfile!, 
+        moodHistory, 
+        onMoodSelect: handleMoodSelect, 
+        navigateTo: handleSetActiveScreen, 
+        handleProtectedAction, 
+        onOpenSideMenu: () => setIsSideMenuOpen(true), 
+        chatHistory, 
+        onSendMessage: handleSendMessage, 
+        isLoading: isChatLoading, 
+        settings, 
+        setSettings, 
+        onLogout: handleLogout 
+    };
+    
     switch (screen) {
       case Screen.Chat: return <ChatScreen chatHistory={props.chatHistory} onSendMessage={props.onSendMessage} isLoading={props.isLoading} handleProtectedAction={props.handleProtectedAction} />;
       case Screen.Games: return <GamesScreen handleProtectedAction={props.handleProtectedAction} settings={props.settings} setSettings={props.setSettings} />;
@@ -299,7 +361,7 @@ const App: React.FC = () => {
       case Screen.Settings: return <SettingsScreen settings={props.settings} setSettings={props.setSettings} onLogout={props.onLogout} />;
       case Screen.News: return <NewsScreen />;
       case Screen.Gratitude: return <GratitudeScreen />;
-      default: return <HomeScreen userProfile={props.userProfile!} moodHistory={props.moodHistory} onMoodSelect={props.onMoodSelect} navigateTo={props.navigateTo} handleProtectedAction={props.handleProtectedAction} onOpenSideMenu={props.onOpenSideMenu} />;
+      default: return <HomeScreen userProfile={props.userProfile} moodHistory={props.moodHistory} onMoodSelect={props.onMoodSelect} navigateTo={props.navigateTo} handleProtectedAction={props.handleProtectedAction} onOpenSideMenu={props.onOpenSideMenu} />;
     }
   };
 
@@ -317,16 +379,20 @@ const App: React.FC = () => {
     <div className="font-sans">
       <PWALifecycle />
       {showRegistrationModal && <RegistrationModal onRegister={handleRegister} onSkip={() => { setShowRegistrationModal(false); setPendingAction(null); }} />}
-      {notificationQueue.length > 0 && <AchievementPopup key={notificationQueue[0].id} title={notificationQueue[0].title} description={notificationQueue[0].description} onClose={handleDismissNotification} />}
-      {userProfile && <SideMenu isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} userProfile={userProfile} userEmail={currentUser?.email} onNavigate={(s) => { handleSetActiveScreen(s); setIsSideMenuOpen(false); }} onLogout={() => handleLogout()} />}
+      {notificationQueue.length > 0 && (
+          <AchievementPopup key={notificationQueue[0].id} title={notificationQueue[0].title} description={notificationQueue[0].description} onClose={handleDismissNotification} />
+      )}
+      {userProfile && (
+        <SideMenu isOpen={isSideMenuOpen} onClose={() => setIsSideMenuOpen(false)} userProfile={userProfile} userEmail={currentUser?.email} onNavigate={(screen) => { handleSetActiveScreen(screen); setIsSideMenuOpen(false); }} onLogout={() => handleLogout()} />
+      )}
       <main className="relative h-[100dvh] w-screen overflow-hidden">
         {previousScreen && (
             <div key={previousScreen} className={`absolute inset-0 w-full h-full ${direction === 'right' ? 'animate-slide-out-to-left' : 'animate-slide-out-to-right'}`}>
-                {renderCurrentScreen(previousScreen)}
+                {renderScreenContent(previousScreen)}
             </div>
         )}
         <div key={activeScreen} className={`absolute inset-0 w-full h-full ${direction ? (direction === 'right' ? 'animate-slide-in-from-right' : 'animate-slide-in-from-left') : ''}`}>
-            {renderCurrentScreen(activeScreen)}
+            {renderScreenContent(activeScreen)}
         </div>
       </main>
       <BottomNav activeScreen={activeScreen} setActiveScreen={handleSetActiveScreen} settings={settings} />

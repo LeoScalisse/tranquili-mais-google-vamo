@@ -29,10 +29,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeScreen, setActiveScreen, se
   };
 
   return (
-    // Increased bottom spacing for iOS Safe Area
     <nav className="fixed bottom-6 left-0 right-0 h-16 flex justify-center items-center z-50 px-2 pointer-events-none">
       <div 
-        className="bg-white/80 backdrop-blur-lg border border-gray-200/80 rounded-2xl p-1.5 flex justify-between items-center shadow-xl space-x-1 pointer-events-auto max-w-full overflow-x-auto no-scrollbar"
+        className="bg-white/90 backdrop-blur-lg border border-gray-200/80 rounded-2xl p-1.5 flex justify-between items-center shadow-2xl space-x-1 pointer-events-auto max-w-full overflow-x-auto no-scrollbar"
         role="tablist"
         aria-orientation="horizontal"
       >
@@ -47,16 +46,18 @@ const BottomNav: React.FC<BottomNavProps> = ({ activeScreen, setActiveScreen, se
               aria-controls={`screen-${item.label}`}
               className={`
                 flex items-center justify-center rounded-xl h-11 transition-all duration-300 ease-in-out
-                ${isActive ? 'bg-blue-50 text-[#38b6ff] px-3' : 'px-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700'}
+                ${isActive ? 'bg-[#38b6ff] text-white px-4 shadow-md' : 'px-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700'}
               `}
               aria-label={item.label}
             >
-              {item.icon}
+              <div className={isActive ? 'text-white' : ''}>
+                {item.icon}
+              </div>
               <span
                 aria-hidden={!isActive}
                 className={`
-                  text-xs font-medium overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out
-                  ${isActive ? 'max-w-20 ml-2 opacity-100' : 'max-w-0 ml-0 opacity-0'}
+                  text-xs font-bold overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out
+                  ${isActive ? 'max-w-24 ml-2 opacity-100' : 'max-w-0 ml-0 opacity-0'}
                 `}
               >
                 {item.label}

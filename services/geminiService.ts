@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, LiveServerMessage, Modality, Blob, Chat, Type } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
@@ -116,8 +115,8 @@ export const connectLiveSession = async (callbacks: { onOpen: () => void; onMess
 export const generateDilemmaScenarios = async () => {
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: `Crie 4 cenários de "dilema emocional" envolventes para treinar a inteligência emocional. 
-        Varie os temas: Trabalho, Família, Relacionamentos e Autocuidado.
+        contents: `Crie 5 cenários de "dilema emocional" envolventes para treinar a inteligência emocional. 
+        Varie os temas incluindo obrigatoriamente dilemas sobre: honestidade, lealdade, autocrítica, equilíbrio entre vida pessoal e profissional, e saúde mental.
         Retorne como um ARRAY de objetos JSON.`,
         config: {
             responseMimeType: "application/json",
@@ -177,7 +176,9 @@ export async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampl
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
   }
   return buffer;
 }

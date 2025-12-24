@@ -46,7 +46,7 @@ const MoodChart: React.FC<{ moodHistory: MoodEntry[] }> = ({ moodHistory }) => {
     const maxCount = Math.max(...Object.values(moodCounts), 1);
 
     return (
-        <div className="bg-white p-6 rounded-2xl shadow-md mb-6">
+        <div className="bg-white p-6 rounded-2xl shadow-md mb-6 border border-gray-100">
             <h2 className="text-lg font-bold text-gray-700 mb-6 uppercase tracking-wider">Frequência de Humores</h2>
             <div className="flex justify-around items-end h-48 space-x-2">
                 {MOOD_OPTIONS.map(mood => {
@@ -56,7 +56,7 @@ const MoodChart: React.FC<{ moodHistory: MoodEntry[] }> = ({ moodHistory }) => {
                         <div key={mood} className="flex flex-col items-center flex-1 h-full justify-end">
                             <span className="text-xs font-bold text-[#38b6ff] mb-1">{count > 0 ? count : ''}</span>
                             <div 
-                                className="w-full rounded-t-lg transition-all duration-1000 ease-out"
+                                className="w-full rounded-t-lg transition-all duration-1000 ease-out shadow-sm"
                                 style={{ height: `${barHeight}%`, backgroundColor: MOOD_HEX_COLORS[mood] }}
                             />
                             <span className="text-2xl mt-3 filter drop-shadow-sm">{MOOD_EMOJIS[mood]}</span>
@@ -73,13 +73,13 @@ const AchievementsSection: React.FC<{ moodHistory: MoodEntry[], chatCount: numbe
     const achievements = checkAchievements(moodHistory, chatCount);
     const unlockedCount = achievements.filter(a => a.unlocked).length;
     return (
-        <div className="bg-white p-4 rounded-xl shadow-md mb-6">
+        <div className="bg-white p-4 rounded-xl shadow-md mb-6 border border-gray-100">
             <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-gray-700">CONQUISTAS</h2><span className="text-sm font-bold text-[#38b6ff] bg-blue-50 px-3 py-1 rounded-full">{unlockedCount}/{achievements.length}</span></div>
             <div className="grid grid-cols-1 gap-3">
                 {achievements.map((ach) => (
                     <div key={ach.id} className={`flex items-center p-3 rounded-lg border transition-all ${ach.unlocked ? 'border-amber-200 bg-yellow-50/30' : 'border-gray-100 bg-gray-50 opacity-50'}`}>
                         <div className={`p-3 rounded-full mr-4 ${ach.unlocked ? 'bg-yellow-400 text-white' : 'bg-gray-200 text-gray-400'}`}>{ach.unlocked ? <TrophyIcon className="w-5 h-5" /> : <LockIcon className="w-5 h-5" />}</div>
-                        <div className="flex-1"><h3 className="font-bold text-sm">{ach.title}</h3><p className="text-xs text-gray-500">{ach.description}</p></div>
+                        <div className="flex-1"><h3 className="font-bold text-sm text-gray-800">{ach.title}</h3><p className="text-xs text-gray-500">{ach.description}</p></div>
                     </div>
                 ))}
             </div>
@@ -92,14 +92,14 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ moodHistory, settings, ch
       return (
           <div className="p-4 pb-28 bg-gray-50 h-full flex flex-col items-center justify-center text-center">
               <span className="text-6xl mb-4">📈</span>
-              <h1 className="text-3xl font-bold mb-4">Sua Evolução</h1>
+              <h1 className="text-3xl font-bold mb-4 text-gray-900">Sua Evolução</h1>
               <p className="text-gray-500 max-w-sm">Registre seu primeiro humor para começar a ver gráficos e estatísticas aqui.</p>
           </div>
       );
   }
   return (
     <div className="p-4 pb-28 bg-gray-50 h-full overflow-y-auto">
-      <h1 className="text-3xl font-bold mb-6">Sua Evolução</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-900">Sua Evolução</h1>
       <MoodSummary moodHistory={moodHistory} />
       <MoodChart moodHistory={moodHistory} />
       <AchievementsSection moodHistory={moodHistory} chatCount={chatCount} />

@@ -5,68 +5,6 @@ import RadialOrbitalTimeline from '../components/RadialOrbitalTimeline';
 import { ICON_SETS } from '../constants';
 import { CheckIcon } from '../components/ui/Icons';
 
-// --- Sub-components for Onboarding Steps ---
-
-const BreathingAnimator: React.FC<{ onComplete: () => void; onSkip: () => void }> = ({ onComplete, onSkip }) => {
-  const [phase, setPhase] = useState<'inhale' | 'hold' | 'exhale' | 'done'>('inhale');
-  const [cycle, setCycle] = useState(0);
-  const totalCycles = 3;
-
-  const phaseConfig = {
-    inhale: { text: 'Inspire...', duration: 4000, next: 'hold' as const },
-    hold: { text: 'Segure...', duration: 3000, next: 'exhale' as const },
-    exhale: { text: 'Solte...', duration: 5000, next: 'inhale' as const },
-  };
-
-  React.useEffect(() => {
-    if (cycle >= totalCycles) {
-      setPhase('done');
-      const timer = setTimeout(onComplete, 1000);
-      return () => clearTimeout(timer);
-    }
-
-    if (phase !== 'done') {
-      const { duration, next } = phaseConfig[phase];
-      const timer = setTimeout(() => {
-        if (phase === 'exhale') {
-          setCycle(c => c + 1);
-        }
-        setPhase(next);
-      }, duration);
-
-      return () => clearTimeout(timer);
-    }
-  }, [phase, cycle, onComplete, totalCycles]);
-
-  const getAnimationClass = () => {
-    switch (phase) {
-      case 'inhale': return 'scale-150 opacity-100';
-      case 'hold': return 'scale-150 opacity-90';
-      case 'exhale': return 'scale-100 opacity-80';
-      default: return 'scale-100 opacity-0';
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center h-full w-full relative animate-fade-in">
-      <div className="relative flex items-center justify-center mb-12">
-        <div className={`absolute w-64 h-64 bg-white/20 rounded-full blur-2xl transition-all ease-in-out duration-[4000ms] ${phase === 'inhale' || phase === 'hold' ? 'opacity-60 scale-110' : 'opacity-20 scale-90'}`}></div>
-        <div className={`w-40 h-40 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center transition-all ease-in-out ${getAnimationClass()}`} style={{transitionDuration: `${phaseConfig[phase as keyof typeof phaseConfig]?.duration || 1000}ms`}}>
-             <div className="w-full h-full rounded-full bg-white/40 animate-pulse"></div>
-        </div>
-        <div className="absolute mt-64 text-center">
-             <h2 className="text-3xl text-white font-light tracking-wide transition-opacity duration-500">
-                {phase !== 'done' ? phaseConfig[phase as keyof typeof phaseConfig].text : 'Pronto'}
-             </h2>
-        </div>
-      </div>
-      <button onClick={onSkip} className="absolute bottom-10 text-white/60 text-sm hover:text-white transition-colors uppercase tracking-widest">
-         Pular
-      </button>
-    </div>
-  );
-};
-
 const OnboardingScreen: React.FC<{ onComplete: (profile: UserProfile) => void }> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
@@ -76,6 +14,7 @@ const OnboardingScreen: React.FC<{ onComplete: (profile: UserProfile) => void }>
 
   const handleNext = () => {
     setFade(false);
+    // Reduzido o tempo de transição para 200ms para uma sensação mais ágil e fluida
     setTimeout(() => {
       if (step === questions.length - 1) {
         onComplete({ name, path, reason });
@@ -83,7 +22,7 @@ const OnboardingScreen: React.FC<{ onComplete: (profile: UserProfile) => void }>
         setStep(step + 1);
         setFade(true);
       }
-    }, 300);
+    }, 200);
   };
 
   const handlePathSelect = (selectedPath: string) => {
@@ -180,15 +119,6 @@ const OnboardingScreen: React.FC<{ onComplete: (profile: UserProfile) => void }>
       isDark: false
     },
     {
-      title: "Respire fundo...",
-      subtitle: "Vamos fazer uma pequena pausa antes de entrar.",
-      content: <BreathingAnimator onComplete={handleNext} onSkip={handleNext} />,
-      showButton: false,
-      isFullScreen: true,
-      backgroundClass: 'bg-gradient-to-br from-indigo-500 to-purple-500',
-      isDark: true
-    },
-    {
         title: "Tudo pronto!",
         subtitle: "Seu espaço seguro foi criado com sucesso.",
         content: (
@@ -213,25 +143,24 @@ const OnboardingScreen: React.FC<{ onComplete: (profile: UserProfile) => void }>
   const subTextColorClass = currentQuestion.isDark ? 'text-white/80' : 'text-gray-600';
 
   return (
-    <div className={`flex flex-col items-center justify-center h-screen text-center transition-colors duration-500 ease-in-out ${backgroundClass} relative overflow-hidden`}>
+    <div className={`flex flex-col items-center justify-center h-screen text-center transition-colors duration-700 ease-in-out ${backgroundClass} relative overflow-hidden`}>
        
        {/* Progress Bar */}
        <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-200/30 z-20">
-          <div className={`h-full transition-all duration-500 ease-out ${currentQuestion.isDark ? 'bg-white/80' : 'bg-[#38b6ff]'}`} style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
+          <div className={`h-full transition-all duration-500 ease-out ${currentQuestion.isDark ? 'bg-[#ffde59]' : 'bg-[#38b6ff]'}`} style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
        </div>
 
-      <div className={`transition-all duration-500 ease-out w-full ${fade ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${currentQuestion.isFullScreen ? 'h-full flex flex-col' : 'max-w-lg px-6'}`}>
+      <div className={`transition-all duration-300 ease-out w-full ${fade ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95'} ${currentQuestion.isFullScreen ? 'h-full flex flex-col' : 'max-w-lg px-6'}`}>
         
         {currentQuestion.isFullScreen ? (
            <div className="flex-1 flex flex-col justify-center items-center p-6 relative z-10">
-             <div className="pt-8 max-w-xl">
+             <div className="pt-8 max-w-xl animate-fade-in">
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">{currentQuestion.title}</h1>
                 <p className="text-lg text-white/90 mb-6">{currentQuestion.subtitle}</p>
              </div>
              <div className="w-full flex-1 relative flex items-center justify-center">
                 {currentQuestion.content}
              </div>
-              {/* Special Case for Path Select Button position */}
               {path && step === 3 && (
                   <div className="py-8 w-full max-w-xs mx-auto animate-fade-in">
                       <SlideButton
@@ -244,7 +173,7 @@ const OnboardingScreen: React.FC<{ onComplete: (profile: UserProfile) => void }>
               )}
            </div>
         ) : (
-          <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl w-full relative border border-white/50">
+          <div className="bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-xl w-full relative border border-white/50 animate-fade-in">
             <div className="mt-2">
                 <h1 className={`text-3xl font-bold mb-3 ${textColorClass}`}>{currentQuestion.title}</h1>
                 <p className={`text-lg ${subTextColorClass}`}>{currentQuestion.subtitle}</p>

@@ -6,9 +6,10 @@ import { getWellnessTip, WellnessTipData } from '../services/geminiService';
 import { MenuIcon, RefreshCwIcon, HeartIcon, SendIcon } from '../components/ui/Icons';
 import InstallPromptModal from '../components/InstallPromptModal';
 import { BrandText } from '../App';
+import { Event } from '../components/ui/event-manager';
 
 interface HomeScreenProps {
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
   moodHistory: MoodEntry[];
   onMoodSelect: (mood: Mood) => void;
   navigateTo: (screen: Screen) => void;
@@ -18,6 +19,7 @@ interface HomeScreenProps {
 
 const MAX_REFRESHES_PER_DAY = 5;
 const REFRESH_STORAGE_KEY = 'wellness_tip_refresh';
+const GRATITUDE_STORAGE_KEY = 'gratitude_events';
 
 const WellnessTipCard: React.FC<{ tipData: WellnessTipData | null; isLoading: boolean; onRefresh: () => void; refreshCount: number; maxRefreshes: number; }> = ({ tipData, isLoading, onRefresh, refreshCount, maxRefreshes }) => {
   return (
@@ -70,20 +72,56 @@ const GratitudeJournal: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const stored = localStorage.getItem('daily_gratitude');
+    const todayStr = new Date().toDateString();
+    const stored = localStorage.getItem(GRATITUDE_STORAGE_KEY);
     if (stored) {
-      const data = JSON.parse(stored);
-      if (data.date === today) setSavedToday(data.text);
+      const allEvents: Event[] = JSON.parse(stored);
+      // Procura um evento de gratidão criado hoje
+      const todayEntry = allEvents.find(e => 
+        e.category === "Gratidão" && 
+        new Date(e.startTime).toDateString() === todayStr
+      );
+      if (todayEntry) setSavedToday(todayEntry.description || todayEntry.title);
     }
-  }, []);
+  }, [isEditing]);
 
   const handleSave = () => {
     if (!entry.trim()) return;
     playSound('confirm');
-    const today = new Date().toISOString().split('T')[0];
-    const data = { date: today, text: entry };
-    localStorage.setItem('daily_gratitude', JSON.stringify(data));
+    
+    const today = new Date();
+    const todayStr = today.toDateString();
+    const stored = localStorage.getItem(GRATITUDE_STORAGE_KEY);
+    let allEvents: Event[] = stored ? JSON.parse(stored) : [];
+
+    const existingIndex = allEvents.findIndex(e => 
+        e.category === "Gratidão" && 
+        new Date(e.startTime).toDateString() === todayStr
+    );
+
+    if (existingIndex > -1) {
+        // Atualiza o existente
+        allEvents[existingIndex] = {
+            ...allEvents[existingIndex],
+            description: entry,
+            title: entry.length > 30 ? entry.substring(0, 27) + '...' : entry
+        };
+    } else {
+        // Cria um novo
+        const newEvent: Event = {
+            id: crypto.randomUUID(),
+            title: entry.length > 30 ? entry.substring(0, 27) + '...' : entry,
+            description: entry,
+            startTime: today,
+            endTime: new Date(today.getTime() + 3600000),
+            color: 'orange',
+            category: "Gratidão",
+            tags: ["Eu Mesmo"]
+        };
+        allEvents.push(newEvent);
+    }
+
+    localStorage.setItem(GRATITUDE_STORAGE_KEY, JSON.stringify(allEvents));
     setSavedToday(entry);
     setIsEditing(false);
   };
@@ -101,14 +139,25 @@ const GratitudeJournal: React.FC = () => {
         <div className="mt-3 relative z-10">
           <p className="text-sm text-gray-500 mb-3">Pelo que você é grato hoje?</p>
           <div className="relative">
-            <textarea value={entry} onChange={(e) => setEntry(e.target.value)} placeholder="Hoje eu sou grato por..." className="w-full p-3 pr-12 bg-gray-50 rounded-xl border border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 outline-none resize-none text-gray-700 h-24 transition-all" />
-            <button onClick={handleSave} disabled={!entry.trim()} className="absolute bottom-3 right-3 p-2 bg-yellow-400 text-white rounded-full hover:bg-yellow-500 disabled:opacity-50 shadow-sm transition-all"><SendIcon className="w-4 h-4" /></button>
+            <textarea 
+              value={entry} 
+              onChange={(e) => setEntry(e.target.value)} 
+              placeholder="Hoje eu sou grato por..." 
+              className="w-full p-3 pr-12 bg-gray-50 rounded-xl border border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 outline-none resize-none text-gray-700 h-24 transition-all" 
+            />
+            <button 
+              onClick={handleSave} 
+              disabled={!entry.trim()} 
+              className="absolute bottom-3 right-3 p-2 bg-yellow-400 text-white rounded-full hover:bg-yellow-500 disabled:opacity-50 shadow-sm transition-all"
+            >
+              <SendIcon className="w-4 h-4" />
+            </button>
           </div>
         </div>
       ) : (
         <div className="mt-3 relative z-10 animate-fade-in">
           <p className="text-sm text-gray-400 mb-1">Hoje você agradeceu por:</p>
-          <p className="text-lg text-gray-700 font-medium italic leading-relaxed">"{savedToday}"</p>
+          <p className="text-lg text-gray-700 font-medium italic leading-relaxed">"<BrandText text={savedToday} />"</p>
           <button onClick={() => { setEntry(savedToday); setIsEditing(true); playSound('select'); }} className="text-xs text-yellow-600 mt-3 hover:underline font-medium">Editar gratidão</button>
         </div>
       )}
@@ -124,17 +173,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ userProfile, moodHistory, onMoo
   const [isTipLoading, setIsTipLoading] = useState(true);
   const [dailyRefreshCount, setDailyRefreshCount] = useState(0);
   
-  const GREETINGS = [
-    `Bem-vindo, ${userProfile.name}. Respira.`,
-    `Oi, ${userProfile.name}. Um novo dia começa.`,
-    `Boa noite, ${userProfile.name}. Descanse aqui.`,
-    `Que bom te ver, ${userProfile.name}.`,
-    `Sua mente sorriu, ${userProfile.name}.`,
-    `Esse momento é seu, ${userProfile.name}.`,
-    `Tranquili+ te acolhe, ${userProfile.name}.`,
-    `Um instante de paz, ${userProfile.name}.`
-  ];
-
   const today = new Date().toISOString().split('T')[0];
   const hasLoggedMoodToday = moodHistory.some(entry => entry.date === today);
 
@@ -168,15 +206,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ userProfile, moodHistory, onMoo
   };
 
   useEffect(() => {
-    const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-    setGreeting(randomGreeting);
+    if (userProfile) {
+        const GREETINGS = [
+            `Bem-vindo, ${userProfile.name}. Respira.`,
+            `Oi, ${userProfile.name}. Um novo dia começa.`,
+            `Boa noite, ${userProfile.name}. Descanse aqui.`,
+            `Que bom te ver, ${userProfile.name}.`,
+            `Sua mente sorriu, ${userProfile.name}.`,
+            `Esse momento é seu, ${userProfile.name}.`,
+            `Tranquili+ te acolhe, ${userProfile.name}.`,
+            `Um instante de paz, ${userProfile.name}.`
+          ];
+        const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+        setGreeting(randomGreeting);
+    }
     const stored = localStorage.getItem(REFRESH_STORAGE_KEY);
     if (stored) {
         const { date, count } = JSON.parse(stored);
         setDailyRefreshCount(date === today ? count : 0);
     }
     fetchTip(false);
-  }, []);
+  }, [userProfile?.name, today]);
 
   const handleMoodSelection = (mood: Mood) => {
     handleProtectedAction(() => {
@@ -234,8 +284,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ userProfile, moodHistory, onMoo
           <p className="text-white opacity-90 mt-1">Converse com nossa IA para apoio e dicas.</p>
         </div>
         <div onClick={() => handleProtectedAction(() => { playSound('navigation'); navigateTo(Screen.Games); })} className="bg-[#ffde59] p-6 rounded-2xl shadow-lg cursor-pointer transition-transform transform hover:-translate-y-1">
-          <h3 className="text-xl font-bold text-gray-800">Games Mentais</h3>
-          <p className="text-gray-800 opacity-90 mt-1">Desafie sua mente com jogos divertidos.</p>
+          <h3 className="text-xl font-bold text-white">Games Mentais</h3>
+          <p className="text-white opacity-90 mt-1">Desafie sua mente com jogos divertidos.</p>
         </div>
         <GratitudeJournal />
       </div>

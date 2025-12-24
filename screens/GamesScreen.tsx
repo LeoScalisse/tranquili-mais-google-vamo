@@ -4,6 +4,7 @@ import { playSound } from '../services/soundService';
 import { generateDilemmaScenarios } from '../services/geminiService';
 import { AppSettings } from '../types';
 import { BrainIcon, EyeIcon, WindIcon, ArrowLeftIcon, ZapIcon, MessageSquareHeartIcon, SparklesIcon, InfoIcon, X } from '../components/ui/Icons';
+import { BrandText } from '../App';
 
 type Game = 'menu' | 'memory' | 'mindfulness' | 'sequence' | 'dilemma';
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -14,14 +15,16 @@ type Scenario = { id: number; character: string; emotion: string; situation: str
 
 type GameState = {
     memory?: { difficulty?: Difficulty; cards?: CardType[]; moves?: number; };
+    sequence?: { level: number; score: number; sequence: number[]; };
     mindfulness?: { step: number; inputs: Record<number, string[]>; };
+    dilemma?: { scenarios: Scenario[]; currentIndex: number; score: number; };
 };
 
 const GAME_PROGRESS_KEY = 'tranquiliGameProgress';
 const cn = (...classes: (string | undefined | null | false)[]) => classes.filter(Boolean).join(" ");
 
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-    <button onClick={() => { playSound('select'); onClick(); }} className="absolute top-4 left-4 flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors z-10">
+    <button onClick={() => { playSound('select'); onClick(); }} className="absolute top-4 left-4 flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors z-10 p-2">
         <ArrowLeftIcon className="w-5 h-5" /> Voltar
     </button>
 );
@@ -56,7 +59,7 @@ const DIFFICULTY_SETTINGS: Record<Difficulty, { pairs: number; grid: string; car
     hard:   { pairs: 10, grid: 'grid-cols-5 gap-2', cardSize: 'w-14 h-14 md:w-16 md:h-16' },
 };
 
-const shuffleArray = <T,>(array: T[]): T[] => array.sort(() => Math.random() - 0.5);
+const shuffleArray = <T,>(array: T[]): T[] => [...array].sort(() => Math.random() - 0.5);
 
 const generateCards = (pairCount: number): CardType[] => {
   const emojiSubset = shuffleArray(MEMORY_EMOJIS).slice(0, pairCount);
@@ -84,13 +87,19 @@ const MemoryGame: React.FC<{ onBack: () => void; highScores: any; onNewHighScore
       const [f, s] = flippedCards;
       if (cards[f].emoji === cards[s].emoji) {
         playSound('match');
-        setCards(prev => prev.map(c => c.emoji === cards[f].emoji ? { ...c, isMatched: true } : c));
+        const newCards = cards.map(c => c.emoji === cards[f].emoji ? { ...c, isMatched: true } : c);
+        setCards(newCards);
+        onStateChange({ difficulty, cards: newCards, moves: moves + 1 });
       } else {
-        setTimeout(() => setCards(prev => prev.map(c => flippedCards.includes(c.id) ? { ...c, isFlipped: false } : c)), 1000);
+        setTimeout(() => {
+            const newCards = cards.map(c => flippedCards.includes(c.id) ? { ...c, isFlipped: false } : c);
+            setCards(newCards);
+            onStateChange({ difficulty, cards: newCards, moves: moves + 1 });
+        }, 1000);
       }
       setFlippedCards([]);
     }
-  }, [flippedCards, cards]);
+  }, [flippedCards, cards, difficulty, moves, onStateChange]);
 
   useEffect(() => {
     if (cards.length > 0 && cards.every(c => c.isMatched)) {
@@ -99,25 +108,26 @@ const MemoryGame: React.FC<{ onBack: () => void; highScores: any; onNewHighScore
       if (difficulty && (highScores[difficulty] === null || m < highScores[difficulty])) {
           onNewHighScore({ ...highScores, [difficulty]: m });
       }
+      onStateChange(undefined);
     }
-  }, [cards, moves, difficulty, highScores, onNewHighScore]);
+  }, [cards, moves, difficulty, highScores, onNewHighScore, onStateChange]);
 
   if (!difficulty || gameOver) {
       return (
-          <div className="w-full text-center relative pt-12 flex flex-col items-center">
+          <div className="w-full text-center relative pt-12 flex flex-col items-center animate-fade-in">
               <BackButton onClick={onBack} /> <HelpButton onClick={onShowHelp} />
-              <h1 className="text-3xl font-bold mb-2">Jogo da Memória</h1>
+              <h1 className="text-3xl font-bold mb-2 text-gray-900">Jogo da Memória</h1>
               {gameOver ? (
                   <div className="bg-white p-6 rounded-xl shadow-lg mt-4 w-full max-w-sm">
                       <h2 className="text-2xl font-bold text-green-500">Vitória!</h2>
-                      <p className="my-4">Movimentos: <span className="font-bold">{Math.floor(moves / 2)}</span></p>
-                      <button onClick={() => setDifficulty(null)} className="px-8 py-3 bg-[#ffde59] font-bold rounded-lg">Jogar Novamente</button>
+                      <p className="my-4 text-gray-700">Movimentos: <span className="font-bold">{Math.floor(moves / 2)}</span></p>
+                      <button onClick={() => setDifficulty(null)} className="px-8 py-3 bg-[#ffde59] font-bold rounded-lg text-gray-900 shadow hover:bg-yellow-400 transition-colors">Jogar Novamente</button>
                   </div>
               ) : (
                   <div className="space-y-4 w-full max-w-sm mt-6">
                       {(['easy', 'medium', 'hard'] as Difficulty[]).map(diff => (
-                          <button key={diff} onClick={() => startGame(diff)} className="w-full p-4 bg-white rounded-lg shadow-md text-left transition-transform hover:scale-105">
-                              <h3 className="font-bold capitalize">{diff}</h3>
+                          <button key={diff} onClick={() => startGame(diff)} className="w-full p-4 bg-white rounded-lg shadow-md text-left transition-transform hover:scale-[1.02] border border-gray-100">
+                              <h3 className="font-bold capitalize text-gray-800">{diff === 'easy' ? 'Fácil' : diff === 'medium' ? 'Médio' : 'Difícil'}</h3>
                               <p className="text-sm text-gray-500">Recorde: {highScores[diff] ?? '---'}</p>
                           </button>
                       ))}
@@ -127,14 +137,14 @@ const MemoryGame: React.FC<{ onBack: () => void; highScores: any; onNewHighScore
       );
   }
   return (
-    <div className="w-full text-center relative pt-12">
-       <BackButton onClick={() => setDifficulty(null)} /> <HelpButton onClick={onShowHelp} />
-       <h1 className="text-3xl font-bold mb-6">Memória ({difficulty})</h1>
+    <div className="w-full text-center relative pt-12 animate-fade-in">
+       <BackButton onClick={() => { setDifficulty(null); }} /> <HelpButton onClick={onShowHelp} />
+       <h1 className="text-3xl font-bold mb-6 text-gray-900">Memória ({difficulty === 'easy' ? 'Fácil' : difficulty === 'medium' ? 'Médio' : 'Difícil'})</h1>
        <div className={`grid mx-auto max-w-md ${DIFFICULTY_SETTINGS[difficulty].grid}`}>
         {cards.map(card => (
           <div key={card.id} className={cn(DIFFICULTY_SETTINGS[difficulty].cardSize, "relative cursor-pointer transition-transform duration-500 [transform-style:preserve-3d]", (card.isFlipped || card.isMatched) && "[transform:rotateY(180deg)]")} onClick={() => { if (!card.isFlipped && !card.isMatched && flippedCards.length < 2) { playSound('flip'); setCards(prev => prev.map(c => c.id === card.id ? {...c, isFlipped: true} : c)); setFlippedCards(p => [...p, card.id]); setMoves(m => m+1); } }}>
               <div className="absolute w-full h-full bg-blue-400 rounded-lg [backface-visibility:hidden]"></div>
-              <div className="absolute w-full h-full bg-white rounded-lg flex items-center justify-center text-3xl [backface-visibility:hidden] [transform:rotateY(180deg)]">{card.emoji}</div>
+              <div className="absolute w-full h-full bg-white rounded-lg flex items-center justify-center text-3xl [backface-visibility:hidden] [transform:rotateY(180deg)] shadow-inner">{card.emoji}</div>
           </div>
         ))}
        </div>
@@ -142,10 +152,10 @@ const MemoryGame: React.FC<{ onBack: () => void; highScores: any; onNewHighScore
   );
 };
 
-const SequenceGame: React.FC<{ onBack: () => void; highScore: number; onNewHighScore: (s: number) => void; onShowHelp: () => void; }> = ({ onBack, highScore, onNewHighScore, onShowHelp }) => {
-    const [level, setLevel] = useState(1);
-    const [score, setScore] = useState(0);
-    const [sequence, setSequence] = useState<number[]>([]);
+const SequenceGame: React.FC<{ onBack: () => void; highScore: number; onNewHighScore: (s: number) => void; onShowHelp: () => void; savedState?: any; onStateChange: (s: any) => void; }> = ({ onBack, highScore, onNewHighScore, onShowHelp, savedState, onStateChange }) => {
+    const [level, setLevel] = useState(savedState?.level ?? 1);
+    const [score, setScore] = useState(savedState?.score ?? 0);
+    const [sequence, setSequence] = useState<number[]>(savedState?.sequence ?? []);
     const [playerSequence, setPlayerSequence] = useState<number[]>([]);
     const [gameState, setGameState] = useState<'idle' | 'showing' | 'playing' | 'gameOver'>('idle');
     const [activeTile, setActiveTile] = useState<number | null>(null);
@@ -154,7 +164,8 @@ const SequenceGame: React.FC<{ onBack: () => void; highScore: number; onNewHighS
         setPlayerSequence([]); setGameState('showing');
         const next = [...currentSeq, Math.floor(Math.random() * 9)];
         setSequence(next);
-    }, []);
+        onStateChange({ level, score, sequence: next });
+    }, [level, score, onStateChange]);
 
     useEffect(() => {
         if (gameState !== 'showing' || sequence.length === 0) return;
@@ -175,44 +186,111 @@ const SequenceGame: React.FC<{ onBack: () => void; highScore: number; onNewHighS
         if (sequence[nextPlayerSeq.length - 1] !== idx) {
             playSound('error'); setGameState('gameOver');
             if (score > highScore) onNewHighScore(score);
+            onStateChange(undefined);
             return;
         }
         playSound('click'); setPlayerSequence(nextPlayerSeq);
         if (nextPlayerSeq.length === sequence.length) {
-            playSound('confirm'); setScore(s => s + sequence.length * 10);
-            setTimeout(() => { setLevel(l => l+1); startNextLevel(sequence); }, 800);
+            playSound('confirm'); 
+            const newScore = score + sequence.length * 10;
+            const nextLevel = level + 1;
+            setScore(newScore); setLevel(nextLevel);
+            setTimeout(() => { startNextLevel(sequence); }, 800);
         }
     };
 
     if (gameState === 'idle' || gameState === 'gameOver') {
         return (
-            <div className="w-full text-center pt-12 flex flex-col items-center">
+            <div className="w-full text-center pt-12 flex flex-col items-center animate-fade-in">
                 <BackButton onClick={onBack} /> <HelpButton onClick={onShowHelp} />
-                <h1 className="text-3xl font-bold mb-6">{gameState === 'gameOver' ? 'Fim de Jogo' : 'Sequência'}</h1>
-                <p className="mb-4">Seu Recorde: <span className="font-bold">{highScore}</span></p>
-                {gameState === 'gameOver' && <p className="mb-6 text-xl">Sua Pontuação: {score}</p>}
-                <button onClick={() => { setLevel(1); setScore(0); startNextLevel([]); }} className="px-8 py-3 bg-[#38b6ff] text-white font-bold rounded-lg shadow-lg">Começar</button>
+                <h1 className="text-3xl font-bold mb-6 text-gray-900">{gameState === 'gameOver' ? 'Fim de Jogo' : 'Sequência'}</h1>
+                <p className="mb-4 text-gray-700">Seu Recorde: <span className="font-bold">{highScore}</span></p>
+                {gameState === 'gameOver' && <p className="mb-6 text-xl font-medium text-gray-800">Sua Pontuação: {score}</p>}
+                <button onClick={() => { setLevel(1); setScore(0); startNextLevel([]); }} className="px-8 py-3 bg-[#38b6ff] text-white font-bold rounded-lg shadow-lg hover:bg-blue-500 transition-colors">{savedState && gameState !== 'gameOver' ? 'Continuar' : 'Começar'}</button>
             </div>
         );
     }
     return (
-        <div className="w-full text-center pt-12 flex flex-col items-center">
+        <div className="w-full text-center pt-12 flex flex-col items-center animate-fade-in">
             <BackButton onClick={onBack} /> <HelpButton onClick={onShowHelp} />
-            <h1 className="text-2xl font-bold mb-4">Nível {level} | Pontos: {score}</h1>
-            <div className="grid grid-cols-3 gap-3 p-2 bg-white rounded-2xl shadow-md">
+            <h1 className="text-2xl font-bold mb-4 text-gray-900">Nível {level} | Pontos: {score}</h1>
+            <div className="grid grid-cols-3 gap-3 p-3 bg-white rounded-2xl shadow-md border border-gray-100">
                 {Array.from({ length: 9 }).map((_, i) => (
-                    <button key={i} onClick={() => handleTileClick(i)} className={cn("w-20 h-20 rounded-lg transition-all", activeTile === i ? 'bg-yellow-300 scale-105' : 'bg-gray-200')} />
+                    <button key={i} onClick={() => handleTileClick(i)} className={cn("w-20 h-20 rounded-xl transition-all", activeTile === i ? 'bg-yellow-300 scale-105 shadow-lg' : 'bg-gray-100 hover:bg-gray-200')} />
                 ))}
             </div>
         </div>
     );
 };
 
-const EmotionalDilemmaGame: React.FC<{ onBack: () => void; highScore: number; onNewHighScore: (s: number) => void; onShowHelp: () => void; }> = ({ onBack, highScore, onNewHighScore, onShowHelp }) => {
-    const [gameState, setGameState] = useState<'idle' | 'playing' | 'feedback' | 'end'>('idle');
-    const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
-    const [activeScenarios, setActiveScenarios] = useState<Scenario[]>([]);
-    const [score, setScore] = useState(50);
+const MindfulnessGame: React.FC<{ onBack: () => void; onShowHelp: () => void; savedState?: any; onStateChange: (s: any) => void; }> = ({ onBack, onShowHelp, savedState, onStateChange }) => {
+    const STEPS = [
+        { count: 5, label: "coisas que você vê", emoji: "👁️" },
+        { count: 4, label: "coisas que você pode tocar", emoji: "✋" },
+        { count: 3, label: "coisas que você ouve", emoji: "👂" },
+        { count: 2, label: "coisas que você sente o cheiro", emoji: "👃" },
+        { count: 1, label: "coisa que você pode saborear", emoji: "👅" }
+    ];
+
+    const [currentStep, setCurrentStep] = useState(savedState?.step ?? 0);
+    const [inputs, setInputs] = useState<string[]>(Array(STEPS[currentStep]?.count || 0).fill(''));
+    const [done, setDone] = useState(false);
+
+    const handleInputChange = (idx: number, val: string) => {
+        const newInputs = [...inputs];
+        newInputs[idx] = val;
+        setInputs(newInputs);
+    };
+
+    const next = () => {
+        playSound('confirm');
+        if (currentStep < STEPS.length - 1) {
+            const nextStep = currentStep + 1;
+            setCurrentStep(nextStep);
+            setInputs(Array(STEPS[nextStep].count).fill(''));
+            onStateChange({ step: nextStep });
+        } else {
+            setDone(true);
+            onStateChange(undefined);
+            playSound('victory');
+        }
+    };
+
+    if (done) {
+        return (
+            <div className="w-full text-center pt-12 flex flex-col items-center animate-fade-in">
+                <BackButton onClick={onBack} />
+                <h1 className="text-3xl font-bold mb-6 text-gray-900">Ancorado!</h1>
+                <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 mb-6">
+                    <p className="text-lg text-gray-700">Você agora está mais presente e calmo.</p>
+                </div>
+                <button onClick={onBack} className="px-8 py-3 bg-[#38b6ff] text-white font-bold rounded-lg shadow-md">Finalizar</button>
+            </div>
+        );
+    }
+
+    const s = STEPS[currentStep];
+    return (
+        <div className="w-full text-center pt-12 flex flex-col items-center max-w-md mx-auto animate-fade-in">
+            <BackButton onClick={onBack} /> <HelpButton onClick={onShowHelp} />
+            <span className="text-6xl mb-4">{s.emoji}</span>
+            <h2 className="text-2xl font-bold mb-2 text-gray-900">Observe {s.count} {s.label}</h2>
+            <p className="text-gray-500 mb-6 italic">Digite ou apenas pense neles enquanto respira fundo.</p>
+            <div className="w-full space-y-3 mb-8">
+                {inputs.map((val, i) => (
+                    <input key={i} value={val} onChange={(e) => handleInputChange(i, e.target.value)} placeholder={`Item ${i+1}`} className="w-full p-3 bg-white rounded-lg border border-gray-200 focus:ring-2 focus:ring-[#38b6ff] outline-none shadow-sm" />
+                ))}
+            </div>
+            <button onClick={next} className="px-8 py-3 bg-[#38b6ff] text-white font-bold rounded-lg shadow-lg">Próximo</button>
+        </div>
+    );
+};
+
+const EmotionalDilemmaGame: React.FC<{ onBack: () => void; highScore: number; onNewHighScore: (s: number) => void; onShowHelp: () => void; savedState?: any; onStateChange: (s: any) => void; }> = ({ onBack, highScore, onNewHighScore, onShowHelp, savedState, onStateChange }) => {
+    const [gameState, setGameState] = useState<'idle' | 'playing' | 'feedback' | 'end'>(savedState ? 'playing' : 'idle');
+    const [currentScenarioIndex, setCurrentScenarioIndex] = useState(savedState?.currentIndex ?? 0);
+    const [activeScenarios, setActiveScenarios] = useState<Scenario[]>(savedState?.scenarios ?? []);
+    const [score, setScore] = useState(savedState?.score ?? 50);
     const [feedback, setFeedback] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -221,46 +299,69 @@ const EmotionalDilemmaGame: React.FC<{ onBack: () => void; highScore: number; on
         try {
             const data = await generateDilemmaScenarios();
             setActiveScenarios(data); setCurrentScenarioIndex(0); setScore(50); setFeedback(null); setGameState('playing');
+            onStateChange({ scenarios: data, currentIndex: 0, score: 50 });
         } catch (e) { playSound('error'); } finally { setIsGenerating(false); }
     };
 
     const handleChoice = (c: Choice) => {
         if (gameState !== 'playing') return;
         playSound(c.outcome === 'positive' ? 'confirm' : c.outcome === 'negative' ? 'error' : 'select');
-        setScore(prev => Math.max(0, Math.min(100, prev + c.scoreChange)));
-        setFeedback(c.consequence); setGameState('feedback');
+        const newScore = Math.max(0, Math.min(100, score + c.scoreChange));
+        setScore(newScore); setFeedback(c.consequence); setGameState('feedback');
+        
         setTimeout(() => {
             if (currentScenarioIndex < activeScenarios.length - 1) {
-                setCurrentScenarioIndex(i => i + 1); setFeedback(null); setGameState('playing');
+                const nextIdx = currentScenarioIndex + 1;
+                setCurrentScenarioIndex(nextIdx); setFeedback(null); setGameState('playing');
+                onStateChange({ scenarios: activeScenarios, currentIndex: nextIdx, score: newScore });
             } else {
-                setGameState('end'); if (score > highScore) onNewHighScore(score);
+                setGameState('end'); if (newScore > highScore) onNewHighScore(newScore);
+                onStateChange(undefined);
             }
         }, 3000);
     };
 
     if (gameState === 'idle' || gameState === 'end') {
         return (
-            <div className="w-full text-center pt-12 flex flex-col items-center">
+            <div className="w-full text-center pt-12 flex flex-col items-center animate-fade-in">
                 <BackButton onClick={onBack} /> <HelpButton onClick={onShowHelp} />
-                <h1 className="text-3xl font-bold mb-6">Dilemas Emocionais</h1>
-                {gameState === 'end' && <div className="mb-6 bg-white p-6 rounded-xl shadow-lg w-full max-w-sm"><h2 className="text-xl font-bold mb-2">Treino Concluído!</h2><p className="text-3xl font-bold text-blue-500">{score}</p></div>}
-                <button onClick={handleGenerate} disabled={isGenerating} className="px-8 py-3 bg-gradient-to-r from-[#38b6ff] to-blue-400 text-white font-bold rounded-lg shadow-lg flex items-center gap-2">
-                    {isGenerating ? "Gerando 4 dilemas..." : <><SparklesIcon className="w-5 h-5" /> Começar Jornada</>}
+                <h1 className="text-3xl font-bold mb-6 text-gray-900">Dilemas Emocionais</h1>
+                {gameState === 'end' && <div className="mb-6 bg-white p-6 rounded-xl shadow-lg w-full max-w-sm border border-gray-100"><h2 className="text-xl font-bold mb-2 text-gray-800">Treino Concluído!</h2><p className="text-3xl font-bold text-blue-500">{score}</p></div>}
+                <button onClick={handleGenerate} disabled={isGenerating} className="px-8 py-3 bg-gradient-to-r from-[#38b6ff] to-blue-400 text-white font-bold rounded-lg shadow-lg flex items-center gap-2 hover:opacity-90 transition-opacity">
+                    {isGenerating ? "Gerando 5 dilemas..." : <><SparklesIcon className="w-5 h-5" /> {savedState ? 'Reiniciar Jornada' : 'Começar Jornada'}</>}
                 </button>
             </div>
         );
     }
     const s = activeScenarios[currentScenarioIndex];
+    if (!s) return null;
     return (
-        <div className="w-full text-center pt-12 flex flex-col items-center max-w-md mx-auto">
-            <BackButton onClick={() => setGameState('idle')} /> <HelpButton onClick={onShowHelp} />
-            <h2 className="text-xl font-bold mb-4">Cenário {currentScenarioIndex + 1}/4</h2>
-            <div className="w-full bg-white rounded-xl shadow-lg p-6 mb-6 relative min-h-[10rem] flex flex-col justify-center">
-                {gameState === 'feedback' && feedback ? <div className="absolute inset-0 bg-white/95 flex items-center justify-center p-4 font-bold text-blue-600 animate-fade-in">{feedback}</div> : <><span className="text-5xl mb-2">{s.emotion}</span><p>{s.situation}</p></>}
+        <div className="w-full text-center pt-12 flex flex-col items-center max-w-md mx-auto animate-fade-in">
+            <BackButton onClick={() => { onStateChange(undefined); setGameState('idle'); }} /> <HelpButton onClick={onShowHelp} />
+            <h2 className="text-xl font-bold mb-4 text-[#38b6ff]">Cenário {currentScenarioIndex + 1}/{activeScenarios.length}</h2>
+            <div className="w-full bg-white rounded-xl shadow-lg p-6 mb-6 relative min-h-[12rem] flex flex-col justify-center border border-gray-100">
+                {gameState === 'feedback' && feedback ? (
+                    <div className="absolute inset-0 bg-white/95 rounded-xl flex items-center justify-center p-6 font-bold text-[#38b6ff] animate-fade-in text-lg">
+                        {feedback}
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="text-5xl">{s.emotion}</span>
+                            <div className="text-left">
+                                <p className="text-[10px] font-bold text-[#38b6ff] uppercase tracking-widest mb-0.5">Personagem</p>
+                                <p className="text-lg font-bold text-gray-800 leading-tight">{s.character}</p>
+                            </div>
+                        </div>
+                        <p className="text-gray-700 leading-relaxed font-medium text-left">
+                            <BrandText text={s.situation} />
+                        </p>
+                    </>
+                )}
             </div>
             <div className="w-full space-y-3">
                 {s.choices.map((c, i) => (
-                    <button key={i} onClick={() => handleChoice(c)} disabled={gameState === 'feedback'} className="w-full text-left p-4 bg-white rounded-lg shadow-md hover:border-blue-400 border-2 border-transparent transition-all">{c.text}</button>
+                    <button key={i} onClick={() => handleChoice(c)} disabled={gameState === 'feedback'} className="w-full text-left p-4 bg-white rounded-xl shadow-md hover:border-[#38b6ff] border-2 border-transparent transition-all text-gray-700 font-medium active:scale-[0.98]">{c.text}</button>
                 ))}
             </div>
         </div>
@@ -269,7 +370,6 @@ const EmotionalDilemmaGame: React.FC<{ onBack: () => void; highScore: number; on
 
 const GamesScreen: React.FC<{ handleProtectedAction: (a: () => void) => void; settings: AppSettings; setSettings: (s: AppSettings) => void; }> = ({ handleProtectedAction, settings, setSettings }) => {
   const [activeScreen, setActiveScreen] = useState<Game>('menu');
-  const [direction, setDirection] = useState<'left' | 'right' | null>(null);
   const [helpContent, setHelpContent] = useState<any>(null);
   const [localGameState, setLocalGameState] = useState<GameState>(() => {
       const saved = localStorage.getItem(GAME_PROGRESS_KEY);
@@ -285,24 +385,31 @@ const GamesScreen: React.FC<{ handleProtectedAction: (a: () => void) => void; se
       setSettings({ ...settings, highScores: newScores });
   };
 
+  const handleStateUpdate = (game: keyof GameState, state: any) => {
+      setLocalGameState(prev => ({ ...prev, [game]: state }));
+  };
+
   const renderGame = () => {
       switch (activeScreen) {
-          case 'memory': return <MemoryGame onBack={() => setActiveScreen('menu')} highScores={highScores.memory} onNewHighScore={(s) => updateHighScore('memory', s)} savedState={localGameState.memory} onStateChange={(s) => setLocalGameState(p => ({...p, memory: s}))} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.memory)} />;
-          case 'sequence': return <SequenceGame onBack={() => setActiveScreen('menu')} highScore={highScores.sequence} onNewHighScore={(s) => updateHighScore('sequence', s)} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.sequence)} />;
-          case 'dilemma': return <EmotionalDilemmaGame onBack={() => setActiveScreen('menu')} highScore={highScores.dilemma} onNewHighScore={(s) => updateHighScore('dilemma', s)} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.dilemma)} />;
+          case 'memory': return <MemoryGame onBack={() => setActiveScreen('menu')} highScores={highScores.memory} onNewHighScore={(s) => updateHighScore('memory', s)} savedState={localGameState.memory} onStateChange={(s) => handleStateUpdate('memory', s)} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.memory)} />;
+          case 'sequence': return <SequenceGame onBack={() => setActiveScreen('menu')} highScore={highScores.sequence} onNewHighScore={(s) => updateHighScore('sequence', s)} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.sequence)} savedState={localGameState.sequence} onStateChange={(s) => handleStateUpdate('sequence', s)} />;
+          case 'mindfulness': return <MindfulnessGame onBack={() => setActiveScreen('menu')} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.mindfulness)} savedState={localGameState.mindfulness} onStateChange={(s) => handleStateUpdate('mindfulness', s)} />;
+          case 'dilemma': return <EmotionalDilemmaGame onBack={() => setActiveScreen('menu')} highScore={highScores.dilemma} onNewHighScore={(s) => updateHighScore('dilemma', s)} onShowHelp={() => setHelpContent(GAME_INSTRUCTIONS.dilemma)} savedState={localGameState.dilemma} onStateChange={(s) => handleStateUpdate('dilemma', s)} />;
           default: return (
-              <div className="w-full">
-                  <h1 className="text-3xl font-bold mb-6">Games Mentais</h1>
+              <div className="w-full animate-fade-in">
+                  <h1 className="text-3xl font-bold mb-6 text-gray-900">Games Mentais <span className="text-[#ffde59]">+</span></h1>
                   <div className="space-y-4">
                       {[
-                          { id: 'dilemma', t: 'Dilemas Emocionais', d: 'Melhore sua inteligência emocional.', i: <MessageSquareHeartIcon className="text-blue-500" /> },
-                          { id: 'memory', t: 'Jogo da Memória', d: 'Encontre os pares de emojis.', i: <BrainIcon className="text-blue-500" /> },
-                          { id: 'sequence', t: 'Neuro-Sequência', d: 'Repita padrões complexos.', i: <ZapIcon className="text-blue-500" /> }
+                          { id: 'dilemma', t: 'Dilemas Emocionais', d: 'Melhore sua inteligência emocional.', i: <MessageSquareHeartIcon className="text-blue-500" />, resume: !!localGameState.dilemma },
+                          { id: 'mindfulness', t: '5 Sentidos', d: 'Exercício rápido de mindfulness.', i: <WindIcon className="text-blue-500" />, resume: !!localGameState.mindfulness },
+                          { id: 'memory', t: 'Jogo da Memória', d: 'Encontre os pares de emojis.', i: <BrainIcon className="text-blue-500" />, resume: !!localGameState.memory },
+                          { id: 'sequence', t: 'Neuro-Sequência', d: 'Repita padrões complexos.', i: <ZapIcon className="text-blue-500" />, resume: !!localGameState.sequence }
                       ].map(g => (
-                          <div key={g.id} onClick={() => handleProtectedAction(() => { playSound('navigation'); setActiveScreen(g.id as Game); })} className="bg-white p-6 rounded-2xl shadow-lg cursor-pointer transition-transform hover:-translate-y-1">
+                          <div key={g.id} onClick={() => handleProtectedAction(() => { playSound('navigation'); setActiveScreen(g.id as Game); })} className="bg-white p-6 rounded-2xl shadow-lg cursor-pointer transition-transform hover:-translate-y-1 hover:shadow-xl border border-gray-100 relative overflow-hidden group">
+                              {g.resume && <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse border border-yellow-200">Em progresso</div>}
                               <div className="flex items-center gap-4">
-                                  <div className="bg-blue-100 p-3 rounded-full">{g.i}</div>
-                                  <div><h3 className="text-xl font-bold">{g.t}</h3><p className="text-gray-500">{g.d}</p></div>
+                                  <div className="bg-blue-50 p-4 rounded-2xl group-hover:bg-blue-100 transition-colors">{g.i}</div>
+                                  <div><h3 className="text-xl font-bold text-gray-800">{g.t}</h3><p className="text-gray-500 text-sm">{g.d}</p></div>
                               </div>
                           </div>
                       ))}
@@ -313,9 +420,11 @@ const GamesScreen: React.FC<{ handleProtectedAction: (a: () => void) => void; se
   };
 
   return (
-    <div className="p-4 pb-28 bg-gray-50 h-full overflow-y-auto flex flex-col items-center relative">
+    <div className="h-full overflow-y-auto bg-gray-50 scroll-smooth">
        {helpContent && <HelpModal title={helpContent.title} onClose={() => setHelpContent(null)}>{helpContent.instructions}</HelpModal>}
-       <div className="w-full min-h-full flex flex-col items-center">{renderGame()}</div>
+       <div className="w-full p-4 pt-8 pb-36 max-w-2xl mx-auto flex flex-col items-center">
+            {renderGame()}
+       </div>
     </div>
   );
 };
