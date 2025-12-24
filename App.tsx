@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UserProfile, Screen, Mood, MoodEntry, AppSettings, ChatMessage, ChatMode, Achievement } from './types';
 import OnboardingScreen from './screens/OnboardingScreen';
