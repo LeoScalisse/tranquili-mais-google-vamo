@@ -48,6 +48,18 @@ const categoryColorMap: Record<string, string> = {
   "Reflexão": "purple"
 };
 
+// Safe date formatter for datetime-local input
+const formatDateForInput = (date: Date | undefined | null) => {
+  if (!date || isNaN(date.getTime())) return "";
+  try {
+    // We use a simple slice because PWA users expect a consistent ISO-like format
+    // If we wanted local time perfectly we'd adjust for offset, but toISOString is the base
+    return date.toISOString().slice(0, 16);
+  } catch (e) {
+    return "";
+  }
+};
+
 interface EventCardProps {
   event: Event
   onEventClick: (event: Event) => void
@@ -536,8 +548,19 @@ export function EventManager({
                 <Input
                   type="datetime-local"
                   className="text-gray-900"
-                  value={isCreating ? (newEvent.startTime?.toISOString().slice(0, 16) || "") : (selectedEvent?.startTime?.toISOString().slice(0, 16) || "")}
-                  onChange={(e) => { const date = new Date(e.target.value); isCreating ? setNewEvent(prev => ({ ...prev, startTime: date, endTime: new Date(date.getTime() + 3600000) })) : setSelectedEvent(prev => prev ? { ...prev, startTime: date, endTime: new Date(date.getTime() + 3600000) } : null) }}
+                  value={isCreating ? formatDateForInput(newEvent.startTime) : formatDateForInput(selectedEvent?.startTime)}
+                  onChange={(e) => { 
+                    const dateStr = e.target.value;
+                    if (!dateStr) return;
+                    const date = new Date(dateStr); 
+                    if (isNaN(date.getTime())) return;
+                    
+                    if (isCreating) {
+                      setNewEvent(prev => ({ ...prev, startTime: date, endTime: new Date(date.getTime() + 3600000) }))
+                    } else {
+                      setSelectedEvent(prev => prev ? { ...prev, startTime: date, endTime: new Date(date.getTime() + 3600000) } : null)
+                    }
+                  }}
                 />
               </div>
 

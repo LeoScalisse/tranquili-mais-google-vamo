@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { ChatMessage } from '../types';
 
@@ -27,6 +28,10 @@ export const saveChatMessage = async (message: ChatMessage, userId: string) => {
     if (!userId) return;
     
     // Prepare object for DB (convert timestamp number to ISO string)
+    // Defensive check to avoid RangeError: Invalid time value
+    const dateObj = new Date(message.timestamp);
+    const isoTimestamp = (!isNaN(dateObj.getTime())) ? dateObj.toISOString() : new Date().toISOString();
+
     const dbMessage = {
         id: message.id,
         user_id: userId,
@@ -34,7 +39,7 @@ export const saveChatMessage = async (message: ChatMessage, userId: string) => {
         text: message.text,
         image: message.image || null,
         sources: message.sources || null, // JSONB support in Supabase
-        timestamp: new Date(message.timestamp).toISOString()
+        timestamp: isoTimestamp
     };
 
     const { error } = await supabase.from('chat_history').insert(dbMessage);
@@ -58,13 +63,16 @@ export const getUserChatHistory = async (userId: string): Promise<ChatMessage[]>
     }
 
     // Map DB format back to App format (ISO string -> timestamp number)
-    return (data || []).map((row: any) => ({
-        id: row.id,
-        role: row.role,
-        text: row.text,
-        image: row.image,
-        sources: row.sources,
-        timestamp: new Date(row.timestamp).getTime(),
-        user_id: row.user_id
-    }));
+    return (data || []).map((row: any) => {
+        const d = new Date(row.timestamp);
+        return {
+            id: row.id,
+            role: row.role,
+            text: row.text,
+            image: row.image,
+            sources: row.sources,
+            timestamp: !isNaN(d.getTime()) ? d.getTime() : Date.now(),
+            user_id: row.user_id
+        };
+    });
 };
