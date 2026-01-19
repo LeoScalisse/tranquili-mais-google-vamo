@@ -1,7 +1,10 @@
+
 import { GoogleGenAI, GenerateContentResponse, LiveServerMessage, Modality, Blob, Chat, Type } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-if (!apiKey) console.error("GEMINI_API_KEY or API_KEY environment variable not set.");
+// A chave de API deve ser obtida exclusivamente do ambiente
+const apiKey = process.env.API_KEY;
+if (!apiKey) console.error("API_KEY environment variable not set.");
+
 const ai = new GoogleGenAI({ apiKey: apiKey! });
 
 export interface WellnessTipData {
@@ -11,7 +14,7 @@ export interface WellnessTipData {
 
 export const getWellnessTip = async (): Promise<WellnessTipData> => {
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: "Gere uma 'Inspiração do Dia'. Busque uma citação impactante.",
         config: {
             systemInstruction: `Você é o curador de sabedoria do aplicativo Tranquili+.
@@ -34,8 +37,6 @@ export const getWellnessTip = async (): Promise<WellnessTipData> => {
     });
     try {
         let jsonText = response.text?.trim() || "";
-        if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7, jsonText.length - 3).trim();
-        else if (jsonText.startsWith('```')) jsonText = jsonText.substring(3, jsonText.length - 3).trim();
         return JSON.parse(jsonText);
     } catch (e) {
         return { text: "Respire fundo e aprecie o momento presente.", author: "Tranquili+" };
@@ -57,7 +58,7 @@ export const getComplexResponse = async (prompt: string): Promise<string> => {
 
 export const getGroundedResponse = async (prompt: string): Promise<GenerateContentResponse> => {
     return await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { tools: [{ googleSearch: {} }] },
     });
@@ -70,7 +71,7 @@ export const getMentalHealthNews = async (topic?: string, count: number = 6, exc
     const prompt = `Busque ${count} notícias ou estudos RECENTES sobre: "${subject}".${exclusionInstruction}
     Retorne um array JSON. Estrutura: {title, summary, full_content, tag, image_description, source_url}.`;
     return await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { tools: [{ googleSearch: {} }], temperature: 0.5 },
     });
@@ -78,18 +79,33 @@ export const getMentalHealthNews = async (topic?: string, count: number = 6, exc
 
 export const getMultimodalResponse = async (prompt: string, imageBase64: string, mimeType: string): Promise<GenerateContentResponse> => {
     return await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: { parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] },
     });
 };
 
 export const generateCalmImage = async (prompt: string): Promise<string> => {
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
-        config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '1:1' },
+    // Para modelos da série nano banana (gemini-2.5-flash-image), usamos generateContent
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+            parts: [{ text: prompt }]
+        },
+        config: {
+            imageConfig: {
+                aspectRatio: "1:1"
+            }
+        }
     });
-    return `data:image/jpeg;base64,${response.generatedImages[0].image.imageBytes}`;
+    
+    // Iteramos pelas partes para encontrar os dados da imagem
+    for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+        }
+    }
+    
+    throw new Error("Não foi possível gerar a imagem.");
 };
 
 export const createFlashLiteChat = (): Chat => {
@@ -103,7 +119,7 @@ export const createFlashLiteChat = (): Chat => {
 
 export const connectLiveSession = async (callbacks: { onOpen: () => void; onMessage: (message: LiveServerMessage) => void; onError: (e: ErrorEvent) => void; onClose: (e: CloseEvent) => void; }) => {
   return ai.live.connect({
-    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+    model: 'gemini-2.5-flash-native-audio-preview-12-2025',
     callbacks: { onopen: callbacks.onOpen, onmessage: callbacks.onMessage, onerror: callbacks.onError, onclose: callbacks.onClose },
     config: {
       responseModalities: [Modality.AUDIO],
@@ -114,7 +130,7 @@ export const connectLiveSession = async (callbacks: { onOpen: () => void; onMess
 
 export const generateDilemmaScenarios = async () => {
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         contents: `Crie 5 cenários de "dilema emocional" envolventes para treinar a inteligência emocional. 
         Varie os temas incluindo obrigatoriamente dilemas sobre: honestidade, lealdade, autocrítica, equilíbrio entre vida pessoal e profissional, e saúde mental.
         Retorne como um ARRAY de objetos JSON.`,
